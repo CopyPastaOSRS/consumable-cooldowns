@@ -310,12 +310,12 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case POTION:
 				drinkDelay = consumableItem.getDrinkDelay();
 				eatDelay = consumableItem.getEatDelay();
-				actionDelay = consumableItem.getActionDelay();
+				actionDelay += consumableItem.getActionDelay();
 				break;
 			case COMBO_FOOD:
 				eatDelay = consumableItem.getEatDelay();
 				comboEatDelay = consumableItem.getComboEatDelay();
-				actionDelay = consumableItem.getActionDelay();
+				actionDelay += consumableItem.getActionDelay();
 				break;
 		}
 	}
