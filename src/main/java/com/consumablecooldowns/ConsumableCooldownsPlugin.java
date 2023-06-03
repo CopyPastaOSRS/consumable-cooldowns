@@ -57,7 +57,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private static final ImmutableSet<ConsumableItem> CONSUMABLES = ImmutableSet.of(
 		new ConsumableItem(ConsumableItemType.FOOD, 3, 3, ConsumableItemIds.FOOD_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.POTION, 0, 3, 0, 3, ConsumableItemIds.DRINK_ITEM_IDS::contains),
-		new ConsumableItem(ConsumableItemType.COMBO_FOOD, 2, 3, 3, ConsumableItemIds.COMBO_FOOD_ITEM_IDS::contains),
+		new ConsumableItem(ConsumableItemType.COMBO_FOOD, 2, 3, 3, 3, ConsumableItemIds.COMBO_FOOD_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.CAKE, 3, 2, ConsumableItemIds.CAKE_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.F2P_FIRST_SLICE, 3, 1, ConsumableItemIds.F2P_FIRST_SLICE_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.F2P_SECOND_SLICE, 3, 2, ConsumableItemIds.F2P_SECOND_SLICE_ITEM_IDS::contains),
@@ -216,7 +216,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private void processInventoryChanges(ItemContainer itemContainer) {
 		while (!inventoryConsumableItemActions.isEmpty())
 		{
-			InventoryConsumableItemAction itemAction = inventoryConsumableItemActions.pop();
+			InventoryConsumableItemAction itemAction = inventoryConsumableItemActions.removeLast();
 			Item[] oldInventory = itemAction.getOldInventory();
 
 			int itemId = itemAction.getItemId();
@@ -305,7 +305,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
 				eatDelay = consumableItem.getEatDelay();
-				actionDelay = consumableItem.getActionDelay();
+				actionDelay += consumableItem.getActionDelay();
 				break;
 			case POTION:
 				drinkDelay = consumableItem.getDrinkDelay();
@@ -315,6 +315,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case COMBO_FOOD:
 				eatDelay = consumableItem.getEatDelay();
 				comboEatDelay = consumableItem.getComboEatDelay();
+				drinkDelay = consumableItem.getDrinkDelay();
 				actionDelay += consumableItem.getActionDelay();
 				break;
 		}
