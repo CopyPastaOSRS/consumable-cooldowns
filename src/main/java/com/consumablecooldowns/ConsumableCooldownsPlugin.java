@@ -42,6 +42,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 
 import javax.inject.Inject;
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.regex.Pattern;
@@ -92,6 +93,12 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private int drinkDelay;
 
 	@Getter
+	private Instant previousTickInstant;
+
+	@Getter
+	private Instant previousClickInstant;
+
+	@Getter
 	private Deque<InventoryConsumableItemAction> inventoryConsumableItemActions;
 
 	@Provides
@@ -106,6 +113,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		eatDelay = 0;
 		comboEatDelay = 0;
 		drinkDelay = 0;
+		previousClickInstant = Instant.now();
 	}
 
 	@Override
@@ -156,6 +164,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		previousTickInstant = Instant.now();
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
@@ -249,7 +258,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		return null;
 	}
 
-	public String getDelayTextForConsumableItem(ConsumableItem consumableItem)
+	public Integer getDelayForConsumableItem(ConsumableItem consumableItem)
 	{
 		switch (consumableItem.getType())
 		{
@@ -265,7 +274,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 					return null;
 				}
 
-				return String.valueOf(eatDelay);
+				return eatDelay;
 			case POTION:
 				int drinkDelay = getDrinkDelay();
 				if (drinkDelay <= 0)
@@ -273,7 +282,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 					return null;
 				}
 
-				return String.valueOf(drinkDelay);
+				return drinkDelay;
 			case COMBO_FOOD:
 				int comboEatDelay = getComboEatDelay();
 				if (comboEatDelay <= 0)
@@ -281,7 +290,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 					return null;
 				}
 
-				return String.valueOf(comboEatDelay);
+				return comboEatDelay;
 		}
 
 		return null;
@@ -294,6 +303,10 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 	private void itemConsumed(ConsumableItem consumableItem, InventoryConsumableItemAction itemAction)
 	{
+		// todo will reset all pies on every consumed item, should only reset items who's timers changed.
+		//       could probably be solved by having an instant for each of eat/combo/drink/action?
+		previousClickInstant = Instant.now();
+
 		ConsumableItemType consumableItemType = consumableItem.getType();
 		log.debug("{} - {} item with id: {} was consumed", client.getTickCount(), consumableItemType, itemAction.getItemId());
 		switch (consumableItemType)

@@ -47,6 +47,13 @@ public interface ConsumableCooldownsConfig extends Config
 	)
 	String itemCooldownFillSection = "itemCooldownFill";
 
+	@ConfigSection(
+			name = "Item cooldown pie",
+			description = "Options for consumable item cooldown pie",
+			position = 101
+	)
+	String itemCooldownPieSection = "itemCooldownPie";
+
 	@ConfigItem(
 			position = 0,
 			keyName = "showItemCooldownPreview",
@@ -155,4 +162,68 @@ public interface ConsumableCooldownsConfig extends Config
 	{
 		return 90;
 	}
+
+	@ConfigItem(
+			position = 1,
+			keyName = "showItemCooldownPie",
+			name = "Show item cooldown pie",
+			description = "Whether or not the cooldown pie should be shown on consumable items when on cooldown",
+			section = itemCooldownPieSection
+	)
+	default boolean showItemCooldownPie()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			position = 2,
+			keyName = "pieColor",
+			name = "Pie color",
+			description = "Color of consumable item cooldown pie",
+			section = itemCooldownPieSection
+	)
+	default Color getPieColor()
+	{
+		return new Color(17, 255, 255);
+	}
+
+	@Range(min = 2, max = 50)
+	@ConfigItem(
+			position = 3,
+			keyName = "pieDiameter",
+			name = "Pie diameter",
+			description = "Diameter of the consumable item cooldown pie.",
+			section = itemCooldownPieSection
+	)
+	default int getPieDiameter()
+	{
+		return 12;
+	}
+
+	@Range(min = -15, max = 20)
+	@ConfigItem(
+			position = 4,
+			keyName = "pieXOffset",
+			name = "Pie width offset",
+			description = "X-axis offset for consumable item cooldown pie position. Default value is in the center of the item",
+			section = itemCooldownPieSection
+	)
+	default int getPieXOffset()
+	{
+		return 3;
+	}
+
+	@Range(min = -15, max = 15)
+	@ConfigItem(
+			position = 5,
+			keyName = "pieYOffset",
+			name = "Pie height offset",
+			description = "Y-axis offset for consumable item cooldown pie position. Default value is in the center of the item",
+			section = itemCooldownPieSection
+	)
+	default int getPieYOffset()
+	{
+		return 0;
+	}
+
 }
