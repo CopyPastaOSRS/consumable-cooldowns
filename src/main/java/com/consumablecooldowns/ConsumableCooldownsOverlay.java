@@ -26,8 +26,10 @@ package com.consumablecooldowns;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.Constants;
 import net.runelite.api.NullItemID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
@@ -39,18 +41,25 @@ import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import java.awt.*;
+import java.awt.geom.Arc2D;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Objects;
 
 @Slf4j
 public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 {
-	private final String ITEM_COOLDOWN_PREVIEW_DELAY_TEXT = "2";
+	private static final boolean DEBUG = false;
+	private static final String ITEM_COOLDOWN_PREVIEW_DELAY_TEXT = "2";
 
 	private final Client client;
 	private final ConsumableCooldownsPlugin plugin;
 	private final ConsumableCooldownsConfig config;
 	private final ItemManager itemManager;
-	private final Cache<Long, Image> fillCache;
+	private final Cache<Long, ItemImage> fillCache;
 
 	@Inject
 	public ConsumableCooldownsOverlay(Client client, ItemManager itemManager, ConsumableCooldownsPlugin plugin,
@@ -73,6 +82,9 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 	{
 		graphics.setFont(config.getFontType().getFont());
 		renderConsumableCooldowns(graphics, widgetItem);
+		if (DEBUG) {
+			renderDebug(graphics, widgetItem);
+		}
 	}
 
 	void invalidateCache()
@@ -115,14 +127,35 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			return;
 		}
 
-		String delayText = plugin.getDelayTextForConsumableItem(consumableItem);
-		if (delayText == null)
+		Integer delay = plugin.getDelayForConsumableItem(consumableItem);
+		if (delay == null)
 		{
 			return;
 		}
 
 		renderCooldownFill(graphics, widgetItem, slotBounds);
-		renderCooldownText(graphics, delayText, slotBounds);
+		renderCooldownPie(graphics, consumableItem, widgetItem, delay, slotBounds);
+		renderCooldownText(graphics, String.valueOf(delay), slotBounds);
+	}
+
+	private void renderDebug(Graphics2D graphics, WidgetItem widgetItem)
+	{
+		Rectangle slotBounds = widgetItem.getCanvasBounds();
+
+		final ItemImage itemImage = getFillImage(config.getItemFillColor(), 0, widgetItem.getId(), widgetItem.getQuantity());
+		final Point2D centroid = itemImage.visibleCentroid;
+
+		int halfLength = (int) Math.ceil(itemImage.visibleRadius);
+		int length = halfLength * 2;
+		graphics.setColor(Color.BLUE);
+		int ovalX = slotBounds.x + (int) (centroid.getX() - halfLength);
+		int ovalY = slotBounds.y + (int) (centroid.getY() - halfLength);
+		graphics.drawOval(ovalX, ovalY, length, length);
+
+		int pixelX = slotBounds.x + (int) centroid.getX();
+		int pixelY = slotBounds.y + (int) centroid.getY();
+		graphics.setColor(Color.RED);
+		graphics.drawLine(pixelX, pixelY, pixelX, pixelY);
 	}
 
 	private void renderCooldownText(Graphics2D graphics, String delayText, Rectangle slotBounds)
@@ -151,20 +184,145 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			return;
 		}
 
-		final Image image = getFillImage(config.getItemFillColor(), widgetItem.getId(), widgetItem.getQuantity());
-		graphics.drawImage(image, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
+		ItemImage itemImage = getFillImage(config.getItemFillColor(), config.getItemFillOpacity(), widgetItem.getId(), widgetItem.getQuantity());
+		graphics.drawImage(itemImage.image, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
 	}
 
-	private Image getFillImage(Color color, int itemId, int qty)
+	private void renderCooldownPie(
+			Graphics2D graphics,
+			ConsumableItem consumableItem,
+			WidgetItem widgetItem,
+			int delay,
+			Rectangle slotBounds
+	)
 	{
-		long key = (((long) itemId) << 32) | qty;
-		Image image = fillCache.getIfPresent(key);
-		if (image == null)
+		if (!config.showItemCooldownPie())
 		{
-			final Color fillColor = ColorUtil.colorWithAlpha(color, config.getItemFillOpacity());
-			image = ImageUtil.fillImage(itemManager.getImage(itemId, qty, false), fillColor);
-			fillCache.put(key, image);
+			return;
 		}
-		return image;
+
+		// todo I don't think this is very tick accurate, you may be able to consume while the pie is still up
+		Instant deadline = plugin.getPreviousTickInstant().plusMillis((long) Constants.GAME_TICK_LENGTH * delay);
+		Instant clickInstant = plugin.getPreviousInteractionInstantForConsumableItem(consumableItem);
+		long elapsedMillis = Duration.between(Instant.now(), clickInstant).toMillis();
+		long delayDurationMillis = Duration.between(deadline, clickInstant).toMillis();
+		float percent = (float) elapsedMillis / delayDurationMillis;
+
+		int opacity = (int) (config.getItemPieOpacity() * 2.55f);
+		final ItemImage itemImage = getFillImage(Color.BLACK, opacity, widgetItem.getId(), widgetItem.getQuantity());
+		final Point2D centroid = itemImage.visibleCentroid;
+
+		int halfLength = (int) Math.ceil(itemImage.visibleRadius);
+		int length = halfLength * 2;
+		Rectangle outerFrame = new Rectangle(
+				slotBounds.x + (int) (centroid.getX() - halfLength),
+				slotBounds.y + (int) (centroid.getY() - halfLength),
+				length,
+				length
+		);
+
+		Arc2D.Float arc = new Arc2D.Float(Arc2D.PIE);
+		arc.setAngleStart(90); // start at top
+		arc.setAngleExtent((1 - percent) * 360); // percentage of pie to draw
+		arc.setFrame(outerFrame);
+
+		graphics.setClip(arc);
+		graphics.drawImage(itemImage.image, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
+		graphics.setClip(slotBounds); // reset clip
+	}
+
+	private ItemImage getFillImage(Color color, int opacity, int itemId, int qty)
+	{
+		long key = Objects.hash(color, opacity, itemId, qty);
+		ItemImage itemImage = fillCache.getIfPresent(key);
+		if (itemImage == null)
+		{
+			final Color fillColor = ColorUtil.colorWithAlpha(color, opacity);
+			BufferedImage originalImage = itemManager.getImage(itemId, qty, false);
+			BufferedImage filledImage = ImageUtil.fillImage(originalImage, fillColor);
+			Rectangle visibleRect = getVisibleImageRectangle(originalImage);
+			Point2D centroid = getVisibleCentroid(originalImage);
+			double visibleRadius = getVisibleRadius(originalImage, centroid);
+			itemImage = new ItemImage(filledImage, visibleRect, centroid, visibleRadius);
+			log.debug("visible measurement data for id {}: {}, centroid: {}, radius: {}",
+					itemId, itemImage.visibleRectangle, itemImage.visibleCentroid, itemImage.visibleRadius);
+			fillCache.put(key, itemImage);
+		}
+		return itemImage;
+	}
+
+	private static Rectangle getVisibleImageRectangle(final BufferedImage image)
+	{
+		int left = image.getWidth(), top = image.getHeight(), right = 0, bottom = 0;
+		for (int x = 0; x < image.getWidth(); x++)
+		{
+			for (int y = 0; y < image.getHeight(); y++)
+			{
+				int pixel = image.getRGB(x, y);
+				int a = pixel >>> 24;
+				if (a == 0)
+				{
+					continue;
+				}
+
+				left = Math.min(left, x);
+				top = Math.min(top, y);
+				right = Math.max(right, x);
+				bottom = Math.max(bottom, y);
+			}
+		}
+		return new Rectangle(left, top, right - left, bottom - top);
+	}
+
+	private static Point2D getVisibleCentroid(final BufferedImage image)
+	{
+		int pixelCount = 0;
+		double centroidX = 0;
+        double centroidY = 0;
+		for (int x = 0; x < image.getWidth(); x++)
+		{
+			for (int y = 0; y < image.getHeight(); y++)
+			{
+				int pixel = image.getRGB(x, y);
+				int a = pixel >>> 24;
+				if (a == 0)
+				{
+					continue;
+				}
+
+				centroidX += x;
+				centroidY += y;
+				pixelCount++;
+			}
+		}
+		return new Point2D.Double(centroidX / pixelCount, centroidY / pixelCount);
+	}
+
+	private static double getVisibleRadius(final BufferedImage image, Point2D center)
+	{
+		double radius = 0;
+		for (int x = 0; x < image.getWidth(); x++)
+		{
+			for (int y = 0; y < image.getHeight(); y++)
+			{
+				int pixel = image.getRGB(x, y);
+				int a = pixel >>> 24;
+				if (a == 0)
+				{
+					continue;
+				}
+
+				radius = Math.max(radius, center.distanceSq(x, y));
+			}
+		}
+		return Math.sqrt(radius);
+	}
+
+	@AllArgsConstructor
+	private static class ItemImage {
+		private final BufferedImage image;
+		private final Rectangle visibleRectangle;
+        private final Point2D visibleCentroid;
+		private final double visibleRadius;
 	}
 }

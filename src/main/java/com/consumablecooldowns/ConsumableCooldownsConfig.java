@@ -47,6 +47,13 @@ public interface ConsumableCooldownsConfig extends Config
 	)
 	String itemCooldownFillSection = "itemCooldownFill";
 
+	@ConfigSection(
+			name = "Item cooldown pie",
+			description = "Options for consumable item cooldown pie",
+			position = 101
+	)
+	String itemCooldownPieSection = "itemCooldownPie";
+
 	@ConfigItem(
 			position = 0,
 			keyName = "showItemCooldownPreview",
@@ -155,4 +162,30 @@ public interface ConsumableCooldownsConfig extends Config
 	{
 		return 90;
 	}
+
+	@ConfigItem(
+			position = 1,
+			keyName = "showItemCooldownPie",
+			name = "Show item cooldown pie",
+			description = "Whether or not the cooldown pie should be shown on consumable items when on cooldown",
+			section = itemCooldownPieSection
+	)
+	default boolean showItemCooldownPie()
+	{
+		return true;
+	}
+
+	@Range(max = 100)
+	@ConfigItem(
+			position = 8,
+			keyName = "itemPieOpacity",
+			name = "Pie opacity",
+			description = "Opacity of item fill when on cooldown. From 0 to 100.",
+			section = itemCooldownPieSection
+	)
+	default int getItemPieOpacity()
+	{
+		return 50;
+	}
+
 }
