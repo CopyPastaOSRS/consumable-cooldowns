@@ -2,7 +2,7 @@
 
 Find the delays when consuming confusing? Worry no more. This plugin adds cooldown indicators for the various consumable items in your inventory.
 
-![Cooldown indicators example](img/cooldown-indicators-example-2.gif)
+![Cooldown indicators triple eat example](img/triple-eat-example.gif)
 
 ## Customizable cooldown indicators
 The cooldown indicators have a plethora of customization options. You can toggle the cooldown indicator preview in the config options to see how your setting look. If you are missing an option you would like to see, feel free to open an issue or a pull request.
@@ -23,3 +23,23 @@ The plugin supports the following consumable item categories:
 The delays displayed are based on information from this [OSRS Wiki page](https://oldschool.runescape.wiki/w/Food/Fast_foods) and in-game tests. If you find an incorrect delay or a missing consumable, please let me know by opening an issue or pull request.
 
 ![Consumable item categories example](img/cooldown-indicators-example-1.gif)
+
+## Combo eating
+All ways of combo eating are supported. This includes:
+- Double eat in 1 tick
+  - Regular food -> potion
+  - For example:
+    - Anglerfish -> Super restore
+    - Shark -> Karambwan
+- Triple eat in 1 tick 
+  - Regular food -> potion -> combo food
+  - I.e. Anglerfish -> Saradomin brew -> Karambwan
+- Quad eat in 2 ticks
+
+### Triple eat in 1 tick example
+
+![Triple eat example](img/triple-eat-example.gif)
+
+### Quad eat in 2 ticks example
+
+![Quad eat example](img/quad-eat-on-2-ticks-example.gif)
