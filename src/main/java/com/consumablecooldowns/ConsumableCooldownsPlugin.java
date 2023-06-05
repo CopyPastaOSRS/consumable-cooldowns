@@ -42,8 +42,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 
 import javax.inject.Inject;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.*;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -92,7 +91,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private int drinkDelay;
 
 	@Getter
-	private Deque<InventoryConsumableItemAction> inventoryConsumableItemActions;
+	private List<InventoryConsumableItemAction> inventoryConsumableItemActions;
 
 	@Provides
 	ConsumableCooldownsConfig getConfig(ConfigManager configManager)
@@ -111,7 +110,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
-		inventoryConsumableItemActions = new ArrayDeque<>();
+		inventoryConsumableItemActions = new ArrayList<>();
 		setupDelays();
 		overlayManager.add(overlay);
 	}
@@ -180,14 +179,31 @@ public class ConsumableCooldownsPlugin extends Plugin
 		{
 			drinkDelay--;
 		}
+
+		ListIterator<InventoryConsumableItemAction> actionsIterator = inventoryConsumableItemActions.listIterator();
+		while (actionsIterator.hasNext())
+		{
+			InventoryConsumableItemAction itemAction = actionsIterator.next();
+			int ticksSinceAction = client.getTickCount() - itemAction.getActionTick();
+			if (ticksSinceAction <= 1)
+			{
+				continue;
+			}
+
+			actionsIterator.remove();
+			log.warn("{} - Removed item action (id: {}, slot: {}) from queue (size: {}). More than 1 tick since action on tick: {}",
+					client.getTickCount(), itemAction.getItemId(), itemAction.getItemSlot(), inventoryConsumableItemActions.size(), itemAction.getActionTick());
+		}
 	}
 
 	@Subscribe
 	private void onMenuOptionClicked(final MenuOptionClicked event)
 	{
 		String menuOption = Text.removeTags(event.getMenuOption()).toLowerCase();
-		if (!isConsumableMenuOption(menuOption) || isMenuOptionItemIdInInventoryActions(event))
+		log.debug("{} - Menu option clicked: {}. Slot: {}", client.getTickCount(), menuOption, event.getMenuEntry().getParam0());
+		if (!isConsumableMenuOption(menuOption) || isMenuOptionItemInInventoryActions(event))
 		{
+			log.debug("{} - Menu option skipped. Consumable: {}, already in actions: {}", client.getTickCount(), isConsumableMenuOption(menuOption), isMenuOptionItemInInventoryActions(event));
 			return;
 		}
 
@@ -199,7 +215,10 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 		int inventorySlot = event.getMenuEntry().getParam0();
 		Item item = oldInventory.getItems()[inventorySlot];
-		inventoryConsumableItemActions.push(new InventoryConsumableItemAction(oldInventory.getItems(), item.getId(), inventorySlot));
+		inventoryConsumableItemActions.add(new InventoryConsumableItemAction(
+			oldInventory.getItems(), item.getId(), inventorySlot, client.getTickCount())
+		);
+		log.debug("{} - Added item in slot: {} with id: {} to queue", client.getTickCount(), inventorySlot, item.getId());
 	}
 
 	@Subscribe
@@ -211,27 +230,40 @@ public class ConsumableCooldownsPlugin extends Plugin
 		}
 
 		processInventoryChanges(event.getItemContainer());
+		log.debug("{} - Inventory changed. Queue size: {}", client.getTickCount(), inventoryConsumableItemActions.size());
 	}
 
 	private void processInventoryChanges(ItemContainer itemContainer) {
-		while (!inventoryConsumableItemActions.isEmpty())
+		ListIterator<InventoryConsumableItemAction> actionsIterator = inventoryConsumableItemActions.listIterator();
+		while (actionsIterator.hasNext())
 		{
-			InventoryConsumableItemAction itemAction = inventoryConsumableItemActions.removeLast();
-			Item[] oldInventory = itemAction.getOldInventory();
+			InventoryConsumableItemAction itemAction = actionsIterator.next();
+			log.debug("{} - Item in slot: {} with id: {} and idx: {} with size: {} peeked from queue", client.getTickCount(), itemAction.getItemSlot(), itemAction.getItemId(), actionsIterator.nextIndex(), inventoryConsumableItemActions.size());
 
 			int itemId = itemAction.getItemId();
-			int itemSlot = itemAction.getItemSlot();
-			if (itemContainer.getItems()[itemSlot].getId() == oldInventory[itemSlot].getId())
-			{
-				continue;
-			}
-
 			ConsumableItem consumableItem = getConsumableItemFromId(itemId);
 			if (consumableItem == null)
 			{
+				log.debug("{} - Item in slot: {} with id: {} skipped. No consumable item found", client.getTickCount(), itemAction.getItemSlot(), itemAction.getItemId());
+				actionsIterator.remove();
 				continue;
 			}
 
+			if (!itemAction.isItemConsumed(itemContainer.getItems()))
+			{
+				log.debug("{} - Item in slot: {} with id: {} skipped. Item still in slot", client.getTickCount(), itemAction.getItemSlot(), itemAction.getItemId());
+
+				// An item can be consumed one or multiple ticks later than the initial action click due to latency
+				// So leave it on the queue if the item is still there on the action tick as it may be consumed the next tick
+				if (itemAction.getActionTick() != client.getTickCount())
+				{
+					actionsIterator.remove();
+				}
+
+				continue;
+			}
+
+			actionsIterator.remove();
 			itemConsumed(consumableItem, itemAction);
 		}
 	}
@@ -306,17 +338,20 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case P2P_PIE:
 				eatDelay = consumableItem.getEatDelay();
 				actionDelay += consumableItem.getActionDelay();
+				log.debug("{} - FOOD - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
 				break;
 			case POTION:
 				drinkDelay = consumableItem.getDrinkDelay();
 				eatDelay = consumableItem.getEatDelay();
 				actionDelay += consumableItem.getActionDelay();
+				log.debug("{} - POTION - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
 				break;
 			case COMBO_FOOD:
 				eatDelay = consumableItem.getEatDelay();
 				comboEatDelay = consumableItem.getComboEatDelay();
 				drinkDelay = consumableItem.getDrinkDelay();
 				actionDelay += consumableItem.getActionDelay();
+				log.debug("{} - COMBO - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
 				break;
 		}
 	}
@@ -326,8 +361,9 @@ public class ConsumableCooldownsPlugin extends Plugin
 		return EAT_PATTERN.matcher(menuOption).find() || DRINK_PATTERN.matcher(menuOption).find();
 	}
 
-	private boolean isMenuOptionItemIdInInventoryActions(MenuOptionClicked event)
+	private boolean isMenuOptionItemInInventoryActions(MenuOptionClicked event)
 	{
-		return inventoryConsumableItemActions.stream().anyMatch(itemAction -> itemAction.getItemId() == event.getItemId());
+		return inventoryConsumableItemActions.stream().anyMatch(itemAction ->
+				itemAction.getItemId() == event.getItemId() && itemAction.getItemSlot() == event.getParam0());
 	}
 }
