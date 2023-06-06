@@ -28,6 +28,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.Constants;
 import net.runelite.api.NullItemID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
@@ -39,12 +40,16 @@ import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import java.awt.*;
+import java.awt.geom.Arc2D;
 import java.awt.geom.Rectangle2D;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Objects;
 
 @Slf4j
 public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 {
-	private final String ITEM_COOLDOWN_PREVIEW_DELAY_TEXT = "2";
+	private static final String ITEM_COOLDOWN_PREVIEW_DELAY_TEXT = "2";
 
 	private final Client client;
 	private final ConsumableCooldownsPlugin plugin;
@@ -115,14 +120,15 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			return;
 		}
 
-		String delayText = plugin.getDelayTextForConsumableItem(consumableItem);
-		if (delayText == null)
+		Integer delay = plugin.getDelayForConsumableItem(consumableItem);
+		if (delay == null)
 		{
 			return;
 		}
 
 		renderCooldownFill(graphics, widgetItem, slotBounds);
-		renderCooldownText(graphics, delayText, slotBounds);
+		renderCooldownPie(graphics, consumableItem, widgetItem, delay, slotBounds);
+		renderCooldownText(graphics, String.valueOf(delay), slotBounds);
 	}
 
 	private void renderCooldownText(Graphics2D graphics, String delayText, Rectangle slotBounds)
@@ -151,17 +157,50 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			return;
 		}
 
-		final Image image = getFillImage(config.getItemFillColor(), widgetItem.getId(), widgetItem.getQuantity());
+		final Image image = getFillImage(config.getItemFillColor(), config.getItemFillOpacity(), widgetItem.getId(), widgetItem.getQuantity());
 		graphics.drawImage(image, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
 	}
 
-	private Image getFillImage(Color color, int itemId, int qty)
+	private void renderCooldownPie(
+			Graphics2D graphics,
+			ConsumableItem consumableItem,
+			WidgetItem widgetItem,
+			int delay,
+			Rectangle slotBounds
+	)
 	{
-		long key = (((long) itemId) << 32) | qty;
+		if (!config.showItemCooldownPie())
+		{
+			return;
+		}
+
+		// todo I don't think this is very tick accurate, you may be able to consume while the pie is still up
+		Instant deadline = plugin.getPreviousTickInstant().plusMillis((long) Constants.GAME_TICK_LENGTH * delay);
+		Instant clickInstant = plugin.getPreviousInteractionInstantForConsumableItem(consumableItem);
+		long elapsedMillis = Duration.between(Instant.now(), clickInstant).toMillis();
+		long delayDurationMillis = Duration.between(deadline, clickInstant).toMillis();
+		float percent = (float) elapsedMillis / delayDurationMillis;
+
+		Arc2D.Float arc = new Arc2D.Float(Arc2D.PIE);
+		arc.setAngleStart(90); // start at top
+		arc.setAngleExtent((1 - percent) * 360); // percentage of pie to draw
+		arc.setFrame(slotBounds);
+
+		int opacity = (int) (config.getItemPieOpacity() * 2.55f);
+		final Image image = getFillImage(Color.BLACK, opacity, widgetItem.getId(), widgetItem.getQuantity());
+
+		graphics.setClip(arc);
+		graphics.drawImage(image, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
+		graphics.setClip(slotBounds); // reset clip
+	}
+
+	private Image getFillImage(Color color, int opacity, int itemId, int qty)
+	{
+		long key = Objects.hash(color, opacity, itemId, qty);
 		Image image = fillCache.getIfPresent(key);
 		if (image == null)
 		{
-			final Color fillColor = ColorUtil.colorWithAlpha(color, config.getItemFillOpacity());
+			final Color fillColor = ColorUtil.colorWithAlpha(color, opacity);
 			image = ImageUtil.fillImage(itemManager.getImage(itemId, qty, false), fillColor);
 			fillCache.put(key, image);
 		}

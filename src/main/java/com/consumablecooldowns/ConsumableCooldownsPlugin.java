@@ -42,6 +42,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 
 import javax.inject.Inject;
+import java.time.Instant;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -91,6 +92,21 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private int drinkDelay;
 
 	@Getter
+	private Instant previousTickInstant;
+
+	@Getter
+	private Instant previousActionDelayInstant;
+
+	@Getter
+	private Instant previousEatDelayInstant;
+
+	@Getter
+	private Instant previousComboEatDelayInstant;
+
+	@Getter
+	private Instant previousDrinkDelayInstant;
+
+	@Getter
 	private List<InventoryConsumableItemAction> inventoryConsumableItemActions;
 
 	@Provides
@@ -105,6 +121,10 @@ public class ConsumableCooldownsPlugin extends Plugin
 		eatDelay = 0;
 		comboEatDelay = 0;
 		drinkDelay = 0;
+		previousActionDelayInstant = Instant.now();
+		previousEatDelayInstant = Instant.now();
+		previousComboEatDelayInstant = Instant.now();
+		previousDrinkDelayInstant = Instant.now();
 	}
 
 	@Override
@@ -155,6 +175,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		previousTickInstant = Instant.now();
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
@@ -281,7 +302,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		return null;
 	}
 
-	public String getDelayTextForConsumableItem(ConsumableItem consumableItem)
+	public Integer getDelayForConsumableItem(ConsumableItem consumableItem)
 	{
 		switch (consumableItem.getType())
 		{
@@ -297,7 +318,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 					return null;
 				}
 
-				return String.valueOf(eatDelay);
+				return eatDelay;
 			case POTION:
 				int drinkDelay = getDrinkDelay();
 				if (drinkDelay <= 0)
@@ -305,7 +326,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 					return null;
 				}
 
-				return String.valueOf(drinkDelay);
+				return drinkDelay;
 			case COMBO_FOOD:
 				int comboEatDelay = getComboEatDelay();
 				if (comboEatDelay <= 0)
@@ -313,7 +334,42 @@ public class ConsumableCooldownsPlugin extends Plugin
 					return null;
 				}
 
-				return String.valueOf(comboEatDelay);
+				return comboEatDelay;
+		}
+
+		return null;
+	}
+
+	public Instant getPreviousInteractionInstantForConsumableItem(ConsumableItem consumableItem)
+	{
+		switch (consumableItem.getType())
+		{
+			case FOOD:
+			case COOKED_CRAB_MEAT:
+			case CAKE:
+			case F2P_FIRST_SLICE:
+			case F2P_SECOND_SLICE:
+			case P2P_PIE:
+				if (getEatDelay() <= 0)
+				{
+					return null;
+				}
+
+				return previousEatDelayInstant;
+			case POTION:
+				if (getDrinkDelay() <= 0)
+				{
+					return null;
+				}
+
+				return previousDrinkDelayInstant;
+			case COMBO_FOOD:
+				if (getComboEatDelay() <= 0)
+				{
+					return null;
+				}
+
+				return previousComboEatDelayInstant;
 		}
 
 		return null;
@@ -328,6 +384,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	{
 		ConsumableItemType consumableItemType = consumableItem.getType();
 		log.debug("{} - {} item with id: {} was consumed", client.getTickCount(), consumableItemType, itemAction.getItemId());
+		Instant now = Instant.now();
 		switch (consumableItemType)
 		{
 			case FOOD:
@@ -339,12 +396,17 @@ public class ConsumableCooldownsPlugin extends Plugin
 				eatDelay = consumableItem.getEatDelay();
 				actionDelay += consumableItem.getActionDelay();
 				log.debug("{} - FOOD - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
+				previousEatDelayInstant = now;
+				previousActionDelayInstant = now;
 				break;
 			case POTION:
 				drinkDelay = consumableItem.getDrinkDelay();
 				eatDelay = consumableItem.getEatDelay();
 				actionDelay += consumableItem.getActionDelay();
 				log.debug("{} - POTION - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
+				previousDrinkDelayInstant = now;
+				previousEatDelayInstant = now;
+				previousActionDelayInstant = now;
 				break;
 			case COMBO_FOOD:
 				eatDelay = consumableItem.getEatDelay();
@@ -352,6 +414,10 @@ public class ConsumableCooldownsPlugin extends Plugin
 				drinkDelay = consumableItem.getDrinkDelay();
 				actionDelay += consumableItem.getActionDelay();
 				log.debug("{} - COMBO - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
+				previousEatDelayInstant = now;
+				previousComboEatDelayInstant = now;
+				previousDrinkDelayInstant = now;
+				previousActionDelayInstant = now;
 				break;
 		}
 	}
