@@ -88,6 +88,9 @@ public class ConsumableCooldownsPlugin extends Plugin
 	@Inject
 	private ConsumableCooldownsOverlay overlay;
 
+	@Inject
+	private ConsumableCooldownsTextOverlay textOverlay;
+
 	private int actionCooldownTicks;
 
 	private int eatCooldownTicks;
@@ -130,6 +133,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		inventoryConsumableItemActions = new ArrayList<>();
 		setupDelays();
 		overlayManager.add(overlay);
+		overlayManager.add(textOverlay);
 	}
 
 	@Override
@@ -138,6 +142,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		inventoryConsumableItemActions = null;
 		setupDelays();
 		overlayManager.remove(overlay);
+		overlayManager.remove(textOverlay);
 	}
 
 	@Subscribe

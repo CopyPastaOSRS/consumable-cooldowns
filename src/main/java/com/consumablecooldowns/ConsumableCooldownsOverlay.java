@@ -27,13 +27,11 @@ package com.consumablecooldowns;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.awt.Color;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -75,7 +73,6 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 	@Override
 	public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem widgetItem)
 	{
-		graphics.setFont(config.getFontType().getFont());
 		renderConsumableCooldowns(graphics, widgetItem);
 	}
 
@@ -144,18 +141,6 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			case NONE:
 				break;
 		}
-
-		switch (config.cooldownTextMode())
-		{
-			case GAME_TICKS:
-				renderCooldownText(graphics, cooldownRemaining.toGameTicks(), slotBounds);
-				break;
-			case SECONDS_MILLISECONDS:
-				renderCooldownText(graphics, cooldownRemaining.toSecondsMilliseconds(), slotBounds);
-				break;
-			case NONE:
-				break;
-		}
 	}
 
 	private float getCooldownPercent(ConsumableItem consumableItem, ConsumableItemCooldown cooldownRemaining)
@@ -163,25 +148,6 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		ConsumableItemCooldown fullCooldown = consumableItem.getFullCooldown();
 		int elapsedCooldownClientTicks = fullCooldown.getClientTicks() - cooldownRemaining.getClientTicks();
 		return (float) elapsedCooldownClientTicks / fullCooldown.getClientTicks();
-	}
-
-	private void renderCooldownText(Graphics2D graphics, String delayText, Rectangle slotBounds)
-	{
-		if (delayText.equals("0.0"))
-		{
-			return;
-		}
-
-		FontMetrics fm = graphics.getFontMetrics();
-		Rectangle2D textBounds = fm.getStringBounds(delayText, graphics);
-
-		int textX = (int) (slotBounds.getX() + (slotBounds.getWidth() / 2) - (textBounds.getWidth() / 2)) - config.getTextXOffset();
-		int textY = (int) (slotBounds.getY() + (slotBounds.getHeight() / 2) + (textBounds.getHeight() / 2)) - config.getTextYOffset();
-
-		graphics.setColor(config.getTextShadowColor());
-		graphics.drawString(delayText, textX + 1, textY + 1);
-		graphics.setColor(config.getTextColor());
-		graphics.drawString(delayText, textX, textY);
 	}
 
 	private void renderCooldownFill(Graphics2D graphics, WidgetItem widgetItem, Rectangle slotBounds, int opacity)
@@ -192,7 +158,6 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 
 	private void renderCooldownBottomToTop(Graphics2D graphics, float percent, WidgetItem widgetItem, Rectangle slotBounds, int opacity)
 	{
-		// FIXME: text getting cut off with high offset in this indicator mode
 		int itemId = widgetItem.getId();
 		int quantity = widgetItem.getQuantity();
 
