@@ -32,6 +32,8 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.util.HashMap;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.NullItemID;
@@ -48,6 +50,7 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 	private final ConsumableCooldownsConfig config;
 	private final ItemManager itemManager;
 	private final Cache<Long, Image> fillCache;
+	private final Cache<Long, InventoryIconSize> inventoryIconSizeCache;
 
 	@Inject
 	public ConsumableCooldownsOverlay(ItemManager itemManager, ConsumableCooldownsPlugin plugin,
@@ -57,6 +60,10 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		this.plugin = plugin;
 		this.config = config;
 		fillCache = CacheBuilder.newBuilder()
+			.concurrencyLevel(1)
+			.maximumSize(32)
+			.build();
+		inventoryIconSizeCache = CacheBuilder.newBuilder()
 			.concurrencyLevel(1)
 			.maximumSize(32)
 			.build();
@@ -104,17 +111,16 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			return;
 		}
 
-		ConsumableItemCooldown fullCooldown = consumableItem.getFullCooldown();
-		int elapsedCooldownClientTicks = fullCooldown.getClientTicks() - cooldownRemaining.getClientTicks();
-		float percent = (float) elapsedCooldownClientTicks / fullCooldown.getClientTicks();
 		int opacity = (int) (config.getItemCooldownIndicatorFillOpacity() * 2.55f);
-
 		switch (config.cooldownIndicatorMode())
 		{
 			case FILL:
 				renderCooldownFill(graphics, widgetItem, slotBounds, opacity);
 				break;
 			case BOTTOM_TO_TOP:
+				ConsumableItemCooldown fullCooldown = consumableItem.getFullCooldown();
+				int elapsedCooldownClientTicks = fullCooldown.getClientTicks() - cooldownRemaining.getClientTicks();
+				float percent = (float) elapsedCooldownClientTicks / fullCooldown.getClientTicks();
 				renderCooldownBottomToTop(graphics, percent, widgetItem, slotBounds, opacity);
 				break;
 			case NONE:
@@ -161,12 +167,51 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 
 	private void renderCooldownBottomToTop(Graphics2D graphics, float percent, WidgetItem widgetItem, Rectangle slotBounds, int opacity)
 	{
-		int clipHeight = Math.min((int) slotBounds.getHeight(), (int) ((1 - percent) * slotBounds.getHeight()));
-		final Image image = getFillImage(config.getItemCooldownIndicatorFillColor(), opacity, widgetItem.getId(), widgetItem.getQuantity());
+		// FIXME: text getting cut off with high offset in this indicator mode
+		int itemId = widgetItem.getId();
+		int quantity = widgetItem.getQuantity();
 
-		graphics.setClip((int) slotBounds.getX(), (int) slotBounds.getY(), (int) slotBounds.getWidth(), clipHeight);
+		final Image image = getFillImage(config.getItemCooldownIndicatorFillColor(), opacity, itemId, quantity);
+		final InventoryIconSize inventoryIconSize = getInventoryIconSize(itemId, quantity, image);
+
+		int clipHeight;
+		Rectangle indicatorBoundingBox;
+
+		// If the item has no icon, or the icon is too small, use the whole slot
+		if (inventoryIconSize.width == 0 || inventoryIconSize.height < 5)
+		{
+			clipHeight = Math.min((int) slotBounds.getHeight(), (int) ((1 - percent) * slotBounds.getHeight()));
+			indicatorBoundingBox = slotBounds;
+		}
+		else
+		{
+			int itemIconHeight = inventoryIconSize.height + config.getBottomToTopFullFillDuration().ordinal();
+			clipHeight = Math.min(itemIconHeight, (int) ((1 - percent) * itemIconHeight));
+			indicatorBoundingBox = new Rectangle(
+				(int) slotBounds.getX(),
+				(int) slotBounds.getY() + inventoryIconSize.minY,
+				inventoryIconSize.width,
+				itemIconHeight
+			);
+		}
+
+		graphics.setClip((int) slotBounds.getX(), (int) indicatorBoundingBox.getY(), (int) slotBounds.getWidth(), clipHeight);
 		graphics.drawImage(image, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
 		graphics.setClip(slotBounds); // reset clip
+	}
+
+	private InventoryIconSize getInventoryIconSize(int itemId, int quantity, Image image)
+	{
+		long key = (((long) itemId) << 32) | quantity;
+		InventoryIconSize inventoryIconSize = inventoryIconSizeCache.getIfPresent(key);
+		if (inventoryIconSize != null)
+		{
+			return inventoryIconSize;
+		}
+
+		inventoryIconSize = getInventoryIconSizeFromImage((BufferedImage) image);
+		inventoryIconSizeCache.put(key, inventoryIconSize);
+		return inventoryIconSize;
 	}
 
 	private Image getFillImage(Color color, int opacity, int itemId, int qty)
@@ -180,5 +225,34 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			fillCache.put(key, image);
 		}
 		return image;
+	}
+
+	private boolean isColorTransparent(Color color)
+	{
+		return color.getAlpha() == 0;
+	}
+
+	private InventoryIconSize getInventoryIconSizeFromImage(BufferedImage inventoryIconImage)
+	{
+		HashMap<InventoryIconPixelCoordinates, Color> iconColors = new HashMap<>();
+		for (int y = 0; y < (inventoryIconImage.getHeight() - 1); y++)
+		{
+			for (int x = 0; x < (inventoryIconImage.getWidth() - 1); x++)
+			{
+				Color color = new Color(inventoryIconImage.getRGB(x, y), true);
+				if (isColorTransparent(color))
+				{
+					continue;
+				}
+
+				iconColors.put(new InventoryIconPixelCoordinates(x, y), color);
+			}
+		}
+
+		int minX = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getX).min().orElse(-1);
+		int maxX = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getX).max().orElse(-1);
+		int minY = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getY).min().orElse(-1);
+		int maxY = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getY).max().orElse(-1);
+		return new InventoryIconSize(minX, minY, maxX - minX, maxY - minY);
 	}
 }

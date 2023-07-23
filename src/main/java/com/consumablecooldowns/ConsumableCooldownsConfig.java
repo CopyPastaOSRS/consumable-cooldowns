@@ -40,17 +40,24 @@ public interface ConsumableCooldownsConfig extends Config
 
 	@ConfigSection(
 		name = "Item cooldown text",
-		description = "Options for consumable item cooldown text",
+		description = "Options for the consumable item cooldown text",
 		position = 99
 	)
 	String itemCooldownTextSection = "itemCooldownText";
 
 	@ConfigSection(
 		name = "Item cooldown indicator",
-		description = "Options for consumable item cooldown indicator",
+		description = "Options for the consumable item cooldown indicator",
 		position = 100
 	)
 	String itemCooldownIndicatorSection = "itemCooldownIndicator";
+
+	@ConfigSection(
+		name = "Bottom to top cooldown indicator",
+		description = "Options for the bottom to top consumable item cooldown indicator",
+		position = 101
+	)
+	String itemBottomToTopCooldownIndicatorSection = "itemBottomToTopCooldownIndicator";
 
 	@ConfigItem(
 		position = 0,
@@ -171,6 +178,19 @@ public interface ConsumableCooldownsConfig extends Config
 	)
 	default int getItemCooldownIndicatorFillOpacity()
 	{
-		return 75;
+		return 80;
+	}
+
+	@ConfigItem(
+		position = 10,
+		keyName = "bottomToTopFullFillDuration",
+		name = "Full fill duration",
+		description = "The duration the cooldown indicator fill fully covers the item icon at the start of a cooldown." +
+			"This can make the cooldown easier to notice. Only works when using the bottom to top cooldown indicator",
+		section = itemBottomToTopCooldownIndicatorSection
+	)
+	default BottomToTopCooldownIndicatorStartDelay getBottomToTopFullFillDuration()
+	{
+		return BottomToTopCooldownIndicatorStartDelay.NORMAL;
 	}
 }
