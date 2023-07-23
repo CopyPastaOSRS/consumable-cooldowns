@@ -24,9 +24,14 @@
  */
 package com.consumablecooldowns;
 
-import net.runelite.client.config.*;
 
-import java.awt.*;
+import java.awt.Color;
+import net.runelite.client.config.Config;
+import net.runelite.client.config.ConfigGroup;
+import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.FontType;
+import net.runelite.client.config.Range;
 
 @ConfigGroup(ConsumableCooldownsConfig.GROUP_NAME)
 public interface ConsumableCooldownsConfig extends Config
@@ -34,24 +39,32 @@ public interface ConsumableCooldownsConfig extends Config
 	String GROUP_NAME = "consumablecooldowns";
 
 	@ConfigSection(
-			name = "Item cooldown text",
-			description = "Options for consumable item cooldown text",
-			position = 99
+		name = "Item cooldown text",
+		description = "Options for the consumable item cooldown text",
+		position = 99
 	)
 	String itemCooldownTextSection = "itemCooldownText";
 
 	@ConfigSection(
-			name = "Item cooldown fill",
-			description = "Options for consumable item cooldown fill",
-			position = 100
+		name = "Item cooldown indicator",
+		description = "Options for the consumable item cooldown indicator",
+		position = 100
 	)
-	String itemCooldownFillSection = "itemCooldownFill";
+	String itemCooldownIndicatorSection = "itemCooldownIndicator";
+
+	@ConfigSection(
+		name = "Bottom to top indicator",
+		description = "Options for the bottom to top consumable item cooldown indicator",
+		closedByDefault = true,
+		position = 101
+	)
+	String itemBottomToTopCooldownIndicatorSection = "itemBottomToTopCooldownIndicator";
 
 	@ConfigItem(
-			position = 0,
-			keyName = "showItemCooldownPreview",
-			name = "Show item cooldown preview",
-			description = "Display a preview of the item cooldown fill and text on all consumable items for configuration purposes"
+		position = 0,
+		keyName = "showItemCooldownPreview",
+		name = "Show item cooldown preview",
+		description = "Display a preview of the item cooldown indicator and text on all consumable items for configuration purposes"
 	)
 	default boolean showItemCooldownPreview()
 	{
@@ -59,23 +72,23 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 1,
-			keyName = "showItemCooldownText",
-			name = "Show item cooldown text",
-			description = "Whether or not cooldown text (in ticks) should be shown on consumable items when on cooldown",
-			section = itemCooldownTextSection
+		position = 1,
+		keyName = "cooldownTextMode",
+		name = "Mode",
+		description = "Mode used for the cooldown text that displays the duration a consumable item is on cooldown",
+		section = itemCooldownTextSection
 	)
-	default boolean showItemCooldownText()
+	default CooldownTextMode cooldownTextMode()
 	{
-		return true;
+		return CooldownTextMode.GAME_TICKS;
 	}
 
 	@ConfigItem(
-			position = 2,
-			keyName = "textColor",
-			name = "Text color",
-			description = "Color of consumable item cooldown text",
-			section = itemCooldownTextSection
+		position = 2,
+		keyName = "textColor",
+		name = "Text color",
+		description = "Color of consumable item cooldown text",
+		section = itemCooldownTextSection
 	)
 	default Color getTextColor()
 	{
@@ -83,11 +96,23 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 3,
-			keyName = "fontType",
-			name = "Text font type",
-			description = "Font type used for consumable item cooldown text",
-			section = itemCooldownTextSection
+		position = 3,
+		keyName = "textShadowColor",
+		name = "Text shadow color",
+		description = "Color of consumable item cooldown text shadow",
+		section = itemCooldownTextSection
+	)
+	default Color getTextShadowColor()
+	{
+		return Color.BLACK;
+	}
+
+	@ConfigItem(
+		position = 4,
+		keyName = "fontType",
+		name = "Text font type",
+		description = "Font type used for consumable item cooldown text",
+		section = itemCooldownTextSection
 	)
 	default FontType getFontType()
 	{
@@ -96,11 +121,11 @@ public interface ConsumableCooldownsConfig extends Config
 
 	@Range(min = -15, max = 20)
 	@ConfigItem(
-			position = 4,
-			keyName = "textXOffset",
-			name = "Text width offset",
-			description = "X-axis offset for consumable item cooldown text position. Default value is in the center of the item",
-			section = itemCooldownTextSection
+		position = 5,
+		keyName = "textXOffset",
+		name = "Text width offset",
+		description = "X-axis offset for consumable item cooldown text position. Default value is in the center of the item",
+		section = itemCooldownTextSection
 	)
 	default int getTextXOffset()
 	{
@@ -109,11 +134,11 @@ public interface ConsumableCooldownsConfig extends Config
 
 	@Range(min = -15, max = 15)
 	@ConfigItem(
-			position = 5,
-			keyName = "textYOffset",
-			name = "Text height offset",
-			description = "Y-axis offset for consumable item cooldown text position. Default value is in the center of the item",
-			section = itemCooldownTextSection
+		position = 6,
+		keyName = "textYOffset",
+		name = "Text height offset",
+		description = "Y-axis offset for consumable item cooldown text position. Default value is in the center of the item",
+		section = itemCooldownTextSection
 	)
 	default int getTextYOffset()
 	{
@@ -121,38 +146,52 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-			position = 6,
-			keyName = "showItemCooldownFill",
-			name = "Show item cooldown fill",
-			description = "Whether or not the consumable item should be filled with a color when on cooldown",
-			section = itemCooldownFillSection
+		position = 7,
+		keyName = "cooldownIndicatorMode",
+		name = "Mode",
+		description = "Indicator mode which should be used to display that a consumable item is on cooldown",
+		section = itemCooldownIndicatorSection
 	)
-	default boolean showItemCooldownFill()
+	default CooldownIndicatorMode getCooldownIndicatorMode()
 	{
-		return true;
+		return CooldownIndicatorMode.BOTTOM_TO_TOP;
 	}
 
 	@ConfigItem(
-			position = 7,
-			keyName = "itemFillColor",
-			name = "Fill color",
-			description = "Color of item fill when on cooldown",
-			section = itemCooldownFillSection
+		position = 8,
+		keyName = "itemCooldownIndicatorFillColor",
+		name = "Fill color",
+		description = "Color of item cooldown indicator fill",
+		section = itemCooldownIndicatorSection
 	)
-	default Color getItemFillColor()
+	default Color getItemCooldownIndicatorFillColor()
 	{
-		return new Color(36, 36, 36);
+		return new Color(26, 26, 26);
+	}
+
+	@Range(max = 100)
+	@ConfigItem(
+		position = 9,
+		keyName = "itemCooldownIndicatorFillOpacity",
+		name = "Fill opacity",
+		description = "Opacity of item cooldown indicator fill color when on cooldown. From 0 to 100",
+		section = itemCooldownIndicatorSection
+	)
+	default int getItemCooldownIndicatorFillOpacity()
+	{
+		return 80;
 	}
 
 	@ConfigItem(
-			position = 8,
-			keyName = "itemFillOpacity",
-			name = "Fill opacity",
-			description = "Opacity of item fill color when on cooldown",
-			section = itemCooldownFillSection
+		position = 10,
+		keyName = "bottomToTopFullFillDuration",
+		name = "Full fill duration",
+		description = "The duration the cooldown indicator fill fully covers the item icon at the start of a cooldown. " +
+			"This can make the cooldown easier to notice. Only works when using the bottom to top cooldown indicator",
+		section = itemBottomToTopCooldownIndicatorSection
 	)
-	default int getItemFillOpacity()
+	default BottomToTopCooldownIndicatorStartDelay getBottomToTopFullFillDuration()
 	{
-		return 90;
+		return BottomToTopCooldownIndicatorStartDelay.NORMAL;
 	}
 }

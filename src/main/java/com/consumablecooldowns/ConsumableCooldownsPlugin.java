@@ -26,9 +26,20 @@ package com.consumablecooldowns;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.regex.Pattern;
+import javax.inject.Inject;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
+import net.runelite.api.Client;
+import net.runelite.api.Constants;
+import net.runelite.api.GameState;
+import net.runelite.api.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
@@ -41,15 +52,11 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 
-import javax.inject.Inject;
-import java.util.*;
-import java.util.regex.Pattern;
-
 @Slf4j
 @PluginDescriptor(
-		name = "Consumable Cooldowns",
-		description = "Displays cooldowns of consumable items (food & drinks) in your inventory",
-		tags = {"inventory", "timer", "pvm", "overlay", "cd", "food", "pots", "potion", "highlight"}
+	name = "Consumable Cooldowns",
+	description = "Displays cooldowns on food & drink items in your inventory",
+	tags = {"inventory", "timer", "pvm", "overlay", "cd", "food", "pots", "potion", "highlight"}
 )
 public class ConsumableCooldownsPlugin extends Plugin
 {
@@ -65,6 +72,9 @@ public class ConsumableCooldownsPlugin extends Plugin
 	);
 	private static final Pattern EAT_PATTERN = Pattern.compile("^eat");
 	private static final Pattern DRINK_PATTERN = Pattern.compile("^drink");
+	private static final int ITEM_COOLDOWN_PREVIEW_TICKS = 2;
+	private static final int ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS = 60;
+	private static final int ITEM_COOLDOWN_PREVIEW_GRACE_PERIOD_CLIENT_TICKS = -(Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
 
 	@Inject
 	private Client client;
@@ -78,17 +88,22 @@ public class ConsumableCooldownsPlugin extends Plugin
 	@Inject
 	private ConsumableCooldownsOverlay overlay;
 
-	@Getter
-	private int actionDelay;
+	@Inject
+	private ConsumableCooldownsTextOverlay textOverlay;
 
-	@Getter
-	private int eatDelay;
+	private int actionCooldownTicks;
 
-	@Getter
-	private int comboEatDelay;
+	private int eatCooldownTicks;
+	private int eatCooldownClientTicks;
 
-	@Getter
-	private int drinkDelay;
+	private int drinkCooldownTicks;
+	private int drinkCooldownClientTicks;
+
+	private int comboEatCooldownTicks;
+	private int comboEatCooldownClientTicks;
+
+	private int previewCooldownTicks;
+	private int previewCooldownClientTicks;
 
 	@Getter
 	private List<InventoryConsumableItemAction> inventoryConsumableItemActions;
@@ -101,10 +116,15 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 	private void setupDelays()
 	{
-		actionDelay = 0;
-		eatDelay = 0;
-		comboEatDelay = 0;
-		drinkDelay = 0;
+		actionCooldownTicks = 0;
+		eatCooldownTicks = 0;
+		comboEatCooldownTicks = 0;
+		drinkCooldownTicks = 0;
+		eatCooldownClientTicks = 0;
+		comboEatCooldownClientTicks = 0;
+		drinkCooldownClientTicks = 0;
+		previewCooldownTicks = ITEM_COOLDOWN_PREVIEW_TICKS;
+		previewCooldownClientTicks = ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS;
 	}
 
 	@Override
@@ -113,6 +133,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		inventoryConsumableItemActions = new ArrayList<>();
 		setupDelays();
 		overlayManager.add(overlay);
+		overlayManager.add(textOverlay);
 	}
 
 	@Override
@@ -121,6 +142,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		inventoryConsumableItemActions = null;
 		setupDelays();
 		overlayManager.remove(overlay);
+		overlayManager.remove(textOverlay);
 	}
 
 	@Subscribe
@@ -133,10 +155,19 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 		switch (event.getKey())
 		{
-			case "showItemCooldownFill":
-			case "itemFillColor":
-			case "itemFillOpacity":
-				overlay.invalidateCache();
+			case "cooldownIndicatorMode":
+				overlay.invalidateInventoryIconInfoCache();
+				break;
+			case "itemCooldownIndicatorFillColor":
+			case "itemCooldownIndicatorFillOpacity":
+				overlay.invalidateFillCache();
+				break;
+			case "showItemCooldownPreview":
+				if (config.showItemCooldownPreview())
+				{
+					previewCooldownTicks = ITEM_COOLDOWN_PREVIEW_TICKS;
+					previewCooldownClientTicks = ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS;
+				}
 				break;
 		}
 	}
@@ -153,6 +184,35 @@ public class ConsumableCooldownsPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onClientTick(ClientTick event)
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+
+		if (eatCooldownClientTicks > 0)
+		{
+			eatCooldownClientTicks--;
+		}
+
+		if (comboEatCooldownClientTicks > 0)
+		{
+			comboEatCooldownClientTicks--;
+		}
+
+		if (drinkCooldownClientTicks > 0)
+		{
+			drinkCooldownClientTicks--;
+		}
+
+		if (config.showItemCooldownPreview() && previewCooldownClientTicks > ITEM_COOLDOWN_PREVIEW_GRACE_PERIOD_CLIENT_TICKS)
+		{
+			previewCooldownClientTicks--;
+		}
+	}
+
+	@Subscribe
 	public void onGameTick(GameTick event)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
@@ -160,24 +220,34 @@ public class ConsumableCooldownsPlugin extends Plugin
 			return;
 		}
 
-		if (actionDelay > 0)
+		if (actionCooldownTicks > 0)
 		{
-			actionDelay--;
+			actionCooldownTicks--;
 		}
 
-		if (eatDelay > 0)
+		if (eatCooldownTicks > 0)
 		{
-			eatDelay--;
+			eatCooldownTicks--;
 		}
 
-		if (comboEatDelay > 0)
+		if (comboEatCooldownTicks > 0)
 		{
-			comboEatDelay--;
+			comboEatCooldownTicks--;
 		}
 
-		if (drinkDelay > 0)
+		if (drinkCooldownTicks > 0)
 		{
-			drinkDelay--;
+			drinkCooldownTicks--;
+		}
+
+		if (config.showItemCooldownPreview() && previewCooldownTicks > -1)
+		{
+			previewCooldownTicks--;
+		}
+		else if (config.showItemCooldownPreview())
+		{
+			previewCooldownTicks = ITEM_COOLDOWN_PREVIEW_TICKS;
+			previewCooldownClientTicks = ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS;
 		}
 
 		ListIterator<InventoryConsumableItemAction> actionsIterator = inventoryConsumableItemActions.listIterator();
@@ -192,7 +262,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 			actionsIterator.remove();
 			log.warn("{} - Removed item action (id: {}, slot: {}) from queue (size: {}). More than 1 tick since action on tick: {}",
-					client.getTickCount(), itemAction.getItemId(), itemAction.getItemSlot(), inventoryConsumableItemActions.size(), itemAction.getActionTick());
+				client.getTickCount(), itemAction.getItemId(), itemAction.getItemSlot(), inventoryConsumableItemActions.size(), itemAction.getActionTick());
 		}
 	}
 
@@ -233,7 +303,8 @@ public class ConsumableCooldownsPlugin extends Plugin
 		log.debug("{} - Inventory changed. Queue size: {}", client.getTickCount(), inventoryConsumableItemActions.size());
 	}
 
-	private void processInventoryChanges(ItemContainer itemContainer) {
+	private void processInventoryChanges(ItemContainer itemContainer)
+	{
 		ListIterator<InventoryConsumableItemAction> actionsIterator = inventoryConsumableItemActions.listIterator();
 		while (actionsIterator.hasNext())
 		{
@@ -281,8 +352,13 @@ public class ConsumableCooldownsPlugin extends Plugin
 		return null;
 	}
 
-	public String getDelayTextForConsumableItem(ConsumableItem consumableItem)
+	public ConsumableItemCooldown getCooldownForConsumableItem(ConsumableItem consumableItem)
 	{
+		if (config.showItemCooldownPreview())
+		{
+			return new ConsumableItemCooldown(previewCooldownTicks, previewCooldownClientTicks);
+		}
+
 		switch (consumableItem.getType())
 		{
 			case FOOD:
@@ -291,29 +367,26 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case F2P_FIRST_SLICE:
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
-				int eatDelay = getEatDelay();
-				if (eatDelay <= 0)
+				if (eatCooldownTicks <= 0)
 				{
 					return null;
 				}
 
-				return String.valueOf(eatDelay);
+				return new ConsumableItemCooldown(eatCooldownTicks, eatCooldownClientTicks);
 			case POTION:
-				int drinkDelay = getDrinkDelay();
-				if (drinkDelay <= 0)
+				if (drinkCooldownTicks <= 0)
 				{
 					return null;
 				}
 
-				return String.valueOf(drinkDelay);
+				return new ConsumableItemCooldown(drinkCooldownTicks, drinkCooldownClientTicks);
 			case COMBO_FOOD:
-				int comboEatDelay = getComboEatDelay();
-				if (comboEatDelay <= 0)
+				if (comboEatCooldownTicks <= 0)
 				{
 					return null;
 				}
 
-				return String.valueOf(comboEatDelay);
+				return new ConsumableItemCooldown(comboEatCooldownTicks, comboEatCooldownClientTicks);
 		}
 
 		return null;
@@ -321,13 +394,15 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 	public boolean isNoConsumableCooldownActive()
 	{
-		return eatDelay <= 0 && drinkDelay <= 0 && comboEatDelay <= 0;
+		return (!config.showItemCooldownPreview() && eatCooldownTicks <= 0 && drinkCooldownTicks <= 0 && comboEatCooldownTicks <= 0) ||
+			(config.showItemCooldownPreview() && previewCooldownTicks <= 0);
 	}
 
 	private void itemConsumed(ConsumableItem consumableItem, InventoryConsumableItemAction itemAction)
 	{
 		ConsumableItemType consumableItemType = consumableItem.getType();
 		log.debug("{} - {} item with id: {} was consumed", client.getTickCount(), consumableItemType, itemAction.getItemId());
+
 		switch (consumableItemType)
 		{
 			case FOOD:
@@ -336,22 +411,28 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case F2P_FIRST_SLICE:
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
-				eatDelay = consumableItem.getEatDelay();
-				actionDelay += consumableItem.getActionDelay();
-				log.debug("{} - FOOD - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
+				eatCooldownTicks = consumableItem.getEatCooldownTicks();
+				eatCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(eatCooldownTicks);
+				actionCooldownTicks += consumableItem.getActionCooldownTicks();
+				log.debug("{} - FOOD - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatCooldownTicks, comboEatCooldownTicks, drinkCooldownTicks, actionCooldownTicks);
 				break;
 			case POTION:
-				drinkDelay = consumableItem.getDrinkDelay();
-				eatDelay = consumableItem.getEatDelay();
-				actionDelay += consumableItem.getActionDelay();
-				log.debug("{} - POTION - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
+				drinkCooldownTicks = consumableItem.getDrinkCooldownTicks();
+				drinkCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(drinkCooldownTicks);
+				eatCooldownTicks = consumableItem.getEatCooldownTicks();
+				eatCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(eatCooldownTicks);
+				actionCooldownTicks += consumableItem.getActionCooldownTicks();
+				log.debug("{} - POTION - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatCooldownTicks, comboEatCooldownTicks, drinkCooldownTicks, actionCooldownTicks);
 				break;
 			case COMBO_FOOD:
-				eatDelay = consumableItem.getEatDelay();
-				comboEatDelay = consumableItem.getComboEatDelay();
-				drinkDelay = consumableItem.getDrinkDelay();
-				actionDelay += consumableItem.getActionDelay();
-				log.debug("{} - COMBO - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatDelay, comboEatDelay, drinkDelay, actionDelay);
+				eatCooldownTicks = consumableItem.getEatCooldownTicks();
+				eatCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(eatCooldownTicks);
+				comboEatCooldownTicks = consumableItem.getComboEatCooldownTicks();
+				comboEatCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(comboEatCooldownTicks);
+				drinkCooldownTicks = consumableItem.getDrinkCooldownTicks();
+				drinkCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(drinkCooldownTicks);
+				actionCooldownTicks += consumableItem.getActionCooldownTicks();
+				log.debug("{} - COMBO - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatCooldownTicks, comboEatCooldownTicks, drinkCooldownTicks, actionCooldownTicks);
 				break;
 		}
 	}
@@ -364,6 +445,6 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private boolean isMenuOptionItemInInventoryActions(MenuOptionClicked event)
 	{
 		return inventoryConsumableItemActions.stream().anyMatch(itemAction ->
-				itemAction.getItemId() == event.getItemId() && itemAction.getItemSlot() == event.getParam0());
+			itemAction.getItemId() == event.getItemId() && itemAction.getItemSlot() == event.getParam0());
 	}
 }

@@ -24,10 +24,10 @@
  */
 package com.consumablecooldowns;
 
+import java.util.function.Predicate;
 import lombok.AccessLevel;
 import lombok.Getter;
-
-import java.util.function.Predicate;
+import net.runelite.api.Constants;
 
 /**
  * Item that incurs a delay when consumed
@@ -35,40 +35,72 @@ import java.util.function.Predicate;
 @Getter(AccessLevel.MODULE)
 public class ConsumableItem
 {
-    private final ConsumableItemType type;
-    private final int actionDelay;
-    private final int eatDelay;
-    private final int comboEatDelay;
-    private final int drinkDelay;
-    private final Predicate<Integer> itemFilter;
+	private final ConsumableItemType type;
+	private final int actionCooldownTicks;
+	private final int eatCooldownTicks;
+	private final int comboEatCooldownTicks;
+	private final int drinkCooldownTicks;
+	private final Predicate<Integer> itemFilter;
 
-    public ConsumableItem(ConsumableItemType type, int actionDelay, int eatDelay, int comboEatDelay, Predicate<Integer> itemFilter)
-    {
-        this.type = type;
-        this.actionDelay = actionDelay;
-        this.eatDelay = eatDelay;
-        this.comboEatDelay = comboEatDelay;
-        this.drinkDelay = 0;
-        this.itemFilter = itemFilter;
-    }
+	public ConsumableItem(ConsumableItemType type, int actionCooldownTicks, int eatCooldownTicks, int comboEatCooldownTicks, Predicate<Integer> itemFilter)
+	{
+		this.type = type;
+		this.actionCooldownTicks = actionCooldownTicks;
+		this.eatCooldownTicks = eatCooldownTicks;
+		this.comboEatCooldownTicks = comboEatCooldownTicks;
+		this.drinkCooldownTicks = 0;
+		this.itemFilter = itemFilter;
+	}
 
-    public ConsumableItem(ConsumableItemType type, int actionDelay, int eatDelay, Predicate<Integer> itemFilter)
-    {
-        this.type = type;
-        this.actionDelay = actionDelay;
-        this.eatDelay = eatDelay;
-        this.comboEatDelay = 0;
-        this.drinkDelay = 0;
-        this.itemFilter = itemFilter;
-    }
+	public ConsumableItem(ConsumableItemType type, int actionCooldownTicks, int eatCooldownTicks, Predicate<Integer> itemFilter)
+	{
+		this.type = type;
+		this.actionCooldownTicks = actionCooldownTicks;
+		this.eatCooldownTicks = eatCooldownTicks;
+		this.comboEatCooldownTicks = 0;
+		this.drinkCooldownTicks = 0;
+		this.itemFilter = itemFilter;
+	}
 
-    public ConsumableItem(ConsumableItemType type, int actionDelay, int eatDelay, int comboEatDelay, int drinkDelay, Predicate<Integer> itemFilter)
-    {
-        this.type = type;
-        this.actionDelay = actionDelay;
-        this.eatDelay = eatDelay;
-        this.comboEatDelay = comboEatDelay;
-        this.drinkDelay = drinkDelay;
-        this.itemFilter = itemFilter;
-    }
+	public ConsumableItem(ConsumableItemType type, int actionCooldownTicks, int eatCooldownTicks, int comboEatCooldownTicks, int drinkCooldownTicks, Predicate<Integer> itemFilter)
+	{
+		this.type = type;
+		this.actionCooldownTicks = actionCooldownTicks;
+		this.eatCooldownTicks = eatCooldownTicks;
+		this.comboEatCooldownTicks = comboEatCooldownTicks;
+		this.drinkCooldownTicks = drinkCooldownTicks;
+		this.itemFilter = itemFilter;
+	}
+
+	public ConsumableItemCooldown getFullCooldown()
+	{
+		switch (type)
+		{
+			case FOOD:
+			case COOKED_CRAB_MEAT:
+			case CAKE:
+			case F2P_FIRST_SLICE:
+			case F2P_SECOND_SLICE:
+			case P2P_PIE:
+				return new ConsumableItemCooldown(eatCooldownTicks, cooldownTicksToClientTicks(eatCooldownTicks));
+			case POTION:
+				return new ConsumableItemCooldown(drinkCooldownTicks, cooldownTicksToClientTicks(drinkCooldownTicks));
+			case COMBO_FOOD:
+				return new ConsumableItemCooldown(comboEatCooldownTicks, cooldownTicksToClientTicks(comboEatCooldownTicks));
+		}
+
+		return null;
+	}
+
+	/**
+	 * Converts game ticks to client ticks. The given tick count is decremented by 1 to account that the first tick
+	 * is already done when the client notices the item is consumed.
+	 *
+	 * @param tickCount consumable cooldown in game ticks
+	 * @return client ticks count
+	 */
+	public int cooldownTicksToClientTicks(int tickCount)
+	{
+		return ((tickCount - 1) * Constants.GAME_TICK_LENGTH) / Constants.CLIENT_TICK_LENGTH;
+	}
 }
