@@ -53,8 +53,9 @@ public interface ConsumableCooldownsConfig extends Config
 	String itemCooldownIndicatorSection = "itemCooldownIndicator";
 
 	@ConfigSection(
-		name = "Bottom to top cooldown indicator",
+		name = "Bottom to top indicator",
 		description = "Options for the bottom to top consumable item cooldown indicator",
+		closedByDefault = true,
 		position = 101
 	)
 	String itemBottomToTopCooldownIndicatorSection = "itemBottomToTopCooldownIndicator";
@@ -151,7 +152,7 @@ public interface ConsumableCooldownsConfig extends Config
 		description = "Indicator mode which should be used to display that a consumable item is on cooldown",
 		section = itemCooldownIndicatorSection
 	)
-	default CooldownIndicatorMode cooldownIndicatorMode()
+	default CooldownIndicatorMode getCooldownIndicatorMode()
 	{
 		return CooldownIndicatorMode.BOTTOM_TO_TOP;
 	}
@@ -185,7 +186,7 @@ public interface ConsumableCooldownsConfig extends Config
 		position = 10,
 		keyName = "bottomToTopFullFillDuration",
 		name = "Full fill duration",
-		description = "The duration the cooldown indicator fill fully covers the item icon at the start of a cooldown." +
+		description = "The duration the cooldown indicator fill fully covers the item icon at the start of a cooldown. " +
 			"This can make the cooldown easier to notice. Only works when using the bottom to top cooldown indicator",
 		section = itemBottomToTopCooldownIndicatorSection
 	)

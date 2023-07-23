@@ -31,9 +31,10 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
+import java.awt.geom.Arc2D;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.NullItemID;
@@ -50,7 +51,7 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 	private final ConsumableCooldownsConfig config;
 	private final ItemManager itemManager;
 	private final Cache<Long, Image> fillCache;
-	private final Cache<Long, InventoryIconSize> inventoryIconSizeCache;
+	private final Cache<Long, InventoryIconInfo> inventoryIconInfoCache;
 
 	@Inject
 	public ConsumableCooldownsOverlay(ItemManager itemManager, ConsumableCooldownsPlugin plugin,
@@ -63,7 +64,7 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			.concurrencyLevel(1)
 			.maximumSize(32)
 			.build();
-		inventoryIconSizeCache = CacheBuilder.newBuilder()
+		inventoryIconInfoCache = CacheBuilder.newBuilder()
 			.concurrencyLevel(1)
 			.maximumSize(32)
 			.build();
@@ -78,9 +79,14 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		renderConsumableCooldowns(graphics, widgetItem);
 	}
 
-	void invalidateCache()
+	void invalidateFillCache()
 	{
 		fillCache.invalidateAll();
+	}
+
+	void invalidateInventoryIconInfoCache()
+	{
+		inventoryIconInfoCache.invalidateAll();
 	}
 
 	private void renderConsumableCooldowns(Graphics2D graphics, WidgetItem widgetItem)
@@ -112,16 +118,28 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		}
 
 		int opacity = (int) (config.getItemCooldownIndicatorFillOpacity() * 2.55f);
-		switch (config.cooldownIndicatorMode())
+		switch (config.getCooldownIndicatorMode())
 		{
 			case FILL:
 				renderCooldownFill(graphics, widgetItem, slotBounds, opacity);
 				break;
 			case BOTTOM_TO_TOP:
-				ConsumableItemCooldown fullCooldown = consumableItem.getFullCooldown();
-				int elapsedCooldownClientTicks = fullCooldown.getClientTicks() - cooldownRemaining.getClientTicks();
-				float percent = (float) elapsedCooldownClientTicks / fullCooldown.getClientTicks();
-				renderCooldownBottomToTop(graphics, percent, widgetItem, slotBounds, opacity);
+				renderCooldownBottomToTop(
+					graphics,
+					getCooldownPercent(consumableItem, cooldownRemaining),
+					widgetItem,
+					slotBounds,
+					opacity
+				);
+				break;
+			case PIE:
+				renderCooldownPie(
+					graphics,
+					getCooldownPercent(consumableItem, cooldownRemaining),
+					widgetItem,
+					slotBounds,
+					opacity
+				);
 				break;
 			case NONE:
 				break;
@@ -138,6 +156,13 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 			case NONE:
 				break;
 		}
+	}
+
+	private float getCooldownPercent(ConsumableItem consumableItem, ConsumableItemCooldown cooldownRemaining)
+	{
+		ConsumableItemCooldown fullCooldown = consumableItem.getFullCooldown();
+		int elapsedCooldownClientTicks = fullCooldown.getClientTicks() - cooldownRemaining.getClientTicks();
+		return (float) elapsedCooldownClientTicks / fullCooldown.getClientTicks();
 	}
 
 	private void renderCooldownText(Graphics2D graphics, String delayText, Rectangle slotBounds)
@@ -172,25 +197,25 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		int quantity = widgetItem.getQuantity();
 
 		final Image image = getFillImage(config.getItemCooldownIndicatorFillColor(), opacity, itemId, quantity);
-		final InventoryIconSize inventoryIconSize = getInventoryIconSize(itemId, quantity, image);
+		final InventoryIconInfo inventoryIconInfo = getInventoryIconInfo(itemId, quantity, image);
 
 		int clipHeight;
 		Rectangle indicatorBoundingBox;
 
 		// If the item has no icon, or the icon is too small, use the whole slot
-		if (inventoryIconSize.width == 0 || inventoryIconSize.height < 5)
+		if (inventoryIconInfo.width < 0 || inventoryIconInfo.height < 5)
 		{
 			clipHeight = Math.min((int) slotBounds.getHeight(), (int) ((1 - percent) * slotBounds.getHeight()));
 			indicatorBoundingBox = slotBounds;
 		}
 		else
 		{
-			int itemIconHeight = inventoryIconSize.height + config.getBottomToTopFullFillDuration().ordinal();
+			int itemIconHeight = inventoryIconInfo.height + config.getBottomToTopFullFillDuration().ordinal();
 			clipHeight = Math.min(itemIconHeight, (int) ((1 - percent) * itemIconHeight));
 			indicatorBoundingBox = new Rectangle(
 				(int) slotBounds.getX(),
-				(int) slotBounds.getY() + inventoryIconSize.minY,
-				inventoryIconSize.width,
+				(int) slotBounds.getY() + inventoryIconInfo.minY,
+				inventoryIconInfo.width,
 				itemIconHeight
 			);
 		}
@@ -200,18 +225,51 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		graphics.setClip(slotBounds); // reset clip
 	}
 
-	private InventoryIconSize getInventoryIconSize(int itemId, int quantity, Image image)
+	private void renderCooldownPie(
+		Graphics2D graphics,
+		float percent,
+		WidgetItem widgetItem,
+		Rectangle slotBounds,
+		int opacity
+	)
+	{
+		int itemId = widgetItem.getId();
+		int quantity = widgetItem.getQuantity();
+
+		final Image inventoryItemImage = getFillImage(config.getItemCooldownIndicatorFillColor(), opacity, itemId, quantity);
+		final InventoryIconInfo inventoryIconInfo = getInventoryIconInfo(itemId, quantity, inventoryItemImage);
+
+		int halfLength = (int) Math.ceil(inventoryIconInfo.visibleRadius);
+		int length = halfLength * 2;
+		Rectangle outerFrame = new Rectangle(
+			slotBounds.x + (int) (inventoryIconInfo.centroid.getX() - halfLength),
+			slotBounds.y + (int) (inventoryIconInfo.centroid.getY() - halfLength),
+			length,
+			length
+		);
+
+		Arc2D.Float arc = new Arc2D.Float(Arc2D.PIE);
+		arc.setAngleStart(90); // start at top
+		arc.setAngleExtent((1 - percent) * 360); // percentage of pie to draw
+		arc.setFrame(outerFrame);
+
+		graphics.setClip(arc);
+		graphics.drawImage(inventoryItemImage, (int) slotBounds.getX(), (int) slotBounds.getY(), null);
+		graphics.setClip(slotBounds); // reset clip
+	}
+
+	private InventoryIconInfo getInventoryIconInfo(int itemId, int quantity, Image image)
 	{
 		long key = (((long) itemId) << 32) | quantity;
-		InventoryIconSize inventoryIconSize = inventoryIconSizeCache.getIfPresent(key);
-		if (inventoryIconSize != null)
+		InventoryIconInfo inventoryIconInfo = inventoryIconInfoCache.getIfPresent(key);
+		if (inventoryIconInfo != null)
 		{
-			return inventoryIconSize;
+			return inventoryIconInfo;
 		}
 
-		inventoryIconSize = getInventoryIconSizeFromImage((BufferedImage) image);
-		inventoryIconSizeCache.put(key, inventoryIconSize);
-		return inventoryIconSize;
+		inventoryIconInfo = getInventoryIconInfoFromImage((BufferedImage) image);
+		inventoryIconInfoCache.put(key, inventoryIconInfo);
+		return inventoryIconInfo;
 	}
 
 	private Image getFillImage(Color color, int opacity, int itemId, int qty)
@@ -227,32 +285,49 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		return image;
 	}
 
-	private boolean isColorTransparent(Color color)
+	private InventoryIconInfo getInventoryIconInfoFromImage(BufferedImage inventoryIconImage)
 	{
-		return color.getAlpha() == 0;
-	}
+		int minX = inventoryIconImage.getWidth(), minY = inventoryIconImage.getHeight(), maxX = 0, maxY = 0;
 
-	private InventoryIconSize getInventoryIconSizeFromImage(BufferedImage inventoryIconImage)
-	{
-		HashMap<InventoryIconPixelCoordinates, Color> iconColors = new HashMap<>();
+		int pixelCount = 0;
+		double centroidX = 0;
+		double centroidY = 0;
+		Point2D centroid = null;
+		double radius = 0;
+
 		for (int y = 0; y < (inventoryIconImage.getHeight() - 1); y++)
 		{
 			for (int x = 0; x < (inventoryIconImage.getWidth() - 1); x++)
 			{
-				Color color = new Color(inventoryIconImage.getRGB(x, y), true);
-				if (isColorTransparent(color))
+				int pixel = inventoryIconImage.getRGB(x, y);
+				int pixelAlpha = pixel >>> 24;
+				if (pixelAlpha == 0)
 				{
 					continue;
 				}
 
-				iconColors.put(new InventoryIconPixelCoordinates(x, y), color);
+				minX = Math.min(minX, x);
+				minY = Math.min(minY, y);
+				maxX = Math.max(maxX, x);
+				maxY = Math.max(maxY, y);
+
+				if (config.getCooldownIndicatorMode() == CooldownIndicatorMode.PIE)
+				{
+					centroidX += x;
+					centroidY += y;
+					pixelCount++;
+					centroid = new Point2D.Double(centroidX / pixelCount, centroidY / pixelCount);
+					radius = Math.max(radius, centroid.distanceSq(x, y));
+				}
 			}
 		}
 
-		int minX = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getX).min().orElse(-1);
-		int maxX = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getX).max().orElse(-1);
-		int minY = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getY).min().orElse(-1);
-		int maxY = iconColors.keySet().stream().mapToInt(InventoryIconPixelCoordinates::getY).max().orElse(-1);
-		return new InventoryIconSize(minX, minY, maxX - minX, maxY - minY);
+		if (config.getCooldownIndicatorMode() == CooldownIndicatorMode.PIE)
+		{
+			double visibleRadius = Math.sqrt(radius);
+			return new InventoryIconInfo(minX, minY, maxX - minX, maxY - minY, centroid, visibleRadius);
+		}
+
+		return new InventoryIconInfo(minX, minY, maxX - minX, maxY - minY);
 	}
 }

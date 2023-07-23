@@ -55,7 +55,7 @@ import net.runelite.client.util.Text;
 @Slf4j
 @PluginDescriptor(
 	name = "Consumable Cooldowns",
-	description = "Displays cooldowns of consumable items (food & drinks) in your inventory",
+	description = "Displays cooldowns on food & drink items in your inventory",
 	tags = {"inventory", "timer", "pvm", "overlay", "cd", "food", "pots", "potion", "highlight"}
 )
 public class ConsumableCooldownsPlugin extends Plugin
@@ -150,9 +150,12 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 		switch (event.getKey())
 		{
+			case "cooldownIndicatorMode":
+				overlay.invalidateInventoryIconInfoCache();
+				break;
 			case "itemCooldownIndicatorFillColor":
 			case "itemCooldownIndicatorFillOpacity":
-				overlay.invalidateCache();
+				overlay.invalidateFillCache();
 				break;
 			case "showItemCooldownPreview":
 				if (config.showItemCooldownPreview())
