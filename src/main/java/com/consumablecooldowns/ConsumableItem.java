@@ -83,7 +83,7 @@ public class ConsumableItem
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
 				return new ConsumableItemCooldown(eatCooldownTicks, cooldownTicksToClientTicks(eatCooldownTicks));
-			case POTION:
+			case DRINK:
 				return new ConsumableItemCooldown(drinkCooldownTicks, cooldownTicksToClientTicks(drinkCooldownTicks));
 			case COMBO_FOOD:
 				return new ConsumableItemCooldown(comboEatCooldownTicks, cooldownTicksToClientTicks(comboEatCooldownTicks));

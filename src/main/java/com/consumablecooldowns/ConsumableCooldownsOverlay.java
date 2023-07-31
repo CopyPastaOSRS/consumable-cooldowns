@@ -145,7 +145,13 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 
 	private float getCooldownPercent(ConsumableItem consumableItem, ConsumableItemCooldown cooldownRemaining)
 	{
-		ConsumableItemCooldown fullCooldown = consumableItem.getFullCooldown();
+		ConsumableItemCooldown fullCooldown = plugin.getLastCooldownSourceByType(consumableItem.getType());
+		if (fullCooldown == null)
+		{
+			log.warn("No full cooldown found for consumable item type: {}", consumableItem.getType());
+			return 1;
+		}
+
 		int elapsedCooldownClientTicks = fullCooldown.getClientTicks() - cooldownRemaining.getClientTicks();
 		return (float) elapsedCooldownClientTicks / fullCooldown.getClientTicks();
 	}
@@ -250,6 +256,27 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		return image;
 	}
 
+	private static double getImageVisibleRadius(final BufferedImage image, Point2D center)
+	{
+		double radius = 0;
+		for (int x = 0; x < image.getWidth(); x++)
+		{
+			for (int y = 0; y < image.getHeight(); y++)
+			{
+				int pixel = image.getRGB(x, y);
+				int pixelAlpha = pixel >>> 24;
+				if (pixelAlpha == 0)
+				{
+					continue;
+				}
+
+				radius = Math.max(radius, center.distanceSq(x, y));
+			}
+		}
+
+		return Math.sqrt(radius);
+	}
+
 	private InventoryIconInfo getInventoryIconInfoFromImage(BufferedImage inventoryIconImage)
 	{
 		int minX = inventoryIconImage.getWidth(), minY = inventoryIconImage.getHeight(), maxX = 0, maxY = 0;
@@ -257,8 +284,6 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		int pixelCount = 0;
 		double centroidX = 0;
 		double centroidY = 0;
-		Point2D centroid = null;
-		double radius = 0;
 
 		for (int y = 0; y < (inventoryIconImage.getHeight() - 1); y++)
 		{
@@ -281,15 +306,14 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 					centroidX += x;
 					centroidY += y;
 					pixelCount++;
-					centroid = new Point2D.Double(centroidX / pixelCount, centroidY / pixelCount);
-					radius = Math.max(radius, centroid.distanceSq(x, y));
 				}
 			}
 		}
 
 		if (config.getCooldownIndicatorMode() == CooldownIndicatorMode.PIE)
 		{
-			double visibleRadius = Math.sqrt(radius);
+			Point2D centroid = new Point2D.Double(centroidX / pixelCount, centroidY / pixelCount);
+			double visibleRadius = getImageVisibleRadius(inventoryIconImage, centroid);
 			return new InventoryIconInfo(minX, minY, maxX - minX, maxY - minY, centroid, visibleRadius);
 		}
 

@@ -27,11 +27,13 @@ package com.consumablecooldowns;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
@@ -62,7 +64,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 {
 	private static final ImmutableSet<ConsumableItem> CONSUMABLES = ImmutableSet.of(
 		new ConsumableItem(ConsumableItemType.FOOD, 3, 3, ConsumableItemIds.FOOD_ITEM_IDS::contains),
-		new ConsumableItem(ConsumableItemType.POTION, 0, 3, 0, 3, ConsumableItemIds.DRINK_ITEM_IDS::contains),
+		new ConsumableItem(ConsumableItemType.DRINK, 0, 3, 0, 3, ConsumableItemIds.DRINK_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.COMBO_FOOD, 2, 3, 3, 3, ConsumableItemIds.COMBO_FOOD_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.CAKE, 3, 2, ConsumableItemIds.CAKE_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.F2P_FIRST_SLICE, 3, 1, ConsumableItemIds.F2P_FIRST_SLICE_ITEM_IDS::contains),
@@ -105,7 +107,13 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private int previewCooldownTicks;
 	private int previewCooldownClientTicks;
 
-	@Getter
+	private int lastFoodConsumedTick;
+	private ConsumableItem lastFoodConsumed;
+	private int lastDrinkConsumedTick;
+	private ConsumableItem lastDrinkConsumed;
+	private int lastComboFoodConsumedTick;
+	private ConsumableItem lastComboFoodConsumed;
+
 	private List<InventoryConsumableItemAction> inventoryConsumableItemActions;
 
 	@Provides
@@ -114,7 +122,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		return configManager.getConfig(ConsumableCooldownsConfig.class);
 	}
 
-	private void setupDelays()
+	private void setup()
 	{
 		actionCooldownTicks = 0;
 		eatCooldownTicks = 0;
@@ -125,13 +133,19 @@ public class ConsumableCooldownsPlugin extends Plugin
 		drinkCooldownClientTicks = 0;
 		previewCooldownTicks = ITEM_COOLDOWN_PREVIEW_TICKS;
 		previewCooldownClientTicks = ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS;
+		lastFoodConsumedTick = -1;
+		lastFoodConsumed = null;
+		lastDrinkConsumedTick = -1;
+		lastDrinkConsumed = null;
+		lastComboFoodConsumedTick = -1;
+		lastComboFoodConsumed = null;
 	}
 
 	@Override
 	protected void startUp() throws Exception
 	{
 		inventoryConsumableItemActions = new ArrayList<>();
-		setupDelays();
+		setup();
 		overlayManager.add(overlay);
 		overlayManager.add(textOverlay);
 	}
@@ -140,7 +154,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		inventoryConsumableItemActions = null;
-		setupDelays();
+		setup();
 		overlayManager.remove(overlay);
 		overlayManager.remove(textOverlay);
 	}
@@ -179,7 +193,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		if (gameState == GameState.LOGGING_IN || gameState == GameState.CONNECTION_LOST || gameState == GameState.HOPPING)
 		{
 			inventoryConsumableItemActions.clear();
-			setupDelays();
+			setup();
 		}
 	}
 
@@ -352,6 +366,141 @@ public class ConsumableCooldownsPlugin extends Plugin
 		return null;
 	}
 
+	private Set<ConsumableItemType> getMaxLastConsumedItemsTickTimers(int max, Map<ConsumableItemType,
+		Integer> lastConsumedItemsTickTimers)
+	{
+		Set<ConsumableItemType> maxTickTimers = new HashSet<>();
+		for (Map.Entry<ConsumableItemType, Integer> entry : lastConsumedItemsTickTimers.entrySet())
+		{
+			if (entry.getValue() == max)
+			{
+				maxTickTimers.add(entry.getKey());
+			}
+		}
+
+		return maxTickTimers;
+	}
+
+	private ConsumableItem getLastFoodCooldownSource()
+	{
+		if (eatCooldownTicks == 0 && drinkCooldownTicks == 0 && comboEatCooldownTicks == 0)
+		{
+			return null;
+		}
+
+		Map<ConsumableItemType, Integer> lastConsumedItemsTickTimers = Map.of(
+			ConsumableItemType.FOOD, lastFoodConsumedTick,
+			ConsumableItemType.DRINK, lastDrinkConsumedTick,
+			ConsumableItemType.COMBO_FOOD, lastComboFoodConsumedTick
+		);
+
+		int max;
+		max = Math.max(lastFoodConsumedTick, lastDrinkConsumedTick);
+		max = Math.max(max, lastComboFoodConsumedTick);
+
+		Set<ConsumableItemType> maxCooldownTypes = getMaxLastConsumedItemsTickTimers(max, lastConsumedItemsTickTimers);
+		if (maxCooldownTypes.contains(ConsumableItemType.COMBO_FOOD))
+		{
+			return lastComboFoodConsumed;
+		}
+		else if (maxCooldownTypes.contains(ConsumableItemType.DRINK))
+		{
+			return lastDrinkConsumed;
+		}
+		else if (maxCooldownTypes.contains(ConsumableItemType.FOOD))
+		{
+			return lastFoodConsumed;
+		}
+
+		return null;
+	}
+
+	private ConsumableItem getLastDrinkCooldownSource()
+	{
+		if (drinkCooldownTicks == 0 && comboEatCooldownTicks == 0)
+		{
+			return null;
+		}
+
+		Map<ConsumableItemType, Integer> lastConsumedItemsTickTimers = Map.of(
+			ConsumableItemType.DRINK, lastDrinkConsumedTick,
+			ConsumableItemType.COMBO_FOOD, lastComboFoodConsumedTick
+		);
+
+		int max = Math.max(lastDrinkConsumedTick, lastComboFoodConsumedTick);
+		Set<ConsumableItemType> maxCooldownTypes = getMaxLastConsumedItemsTickTimers(max, lastConsumedItemsTickTimers);
+		if (maxCooldownTypes.contains(ConsumableItemType.COMBO_FOOD))
+		{
+			return lastComboFoodConsumed;
+		}
+		else if (maxCooldownTypes.contains(ConsumableItemType.DRINK))
+		{
+			return lastDrinkConsumed;
+		}
+
+		return null;
+	}
+
+	private ConsumableItem getLastComboFoodCooldownSource()
+	{
+		if (eatCooldownTicks == 0 && comboEatCooldownTicks == 0)
+		{
+			return null;
+		}
+
+		Map<ConsumableItemType, Integer> lastConsumedItemsTickTimers = Map.of(
+			ConsumableItemType.FOOD, lastFoodConsumedTick,
+			ConsumableItemType.COMBO_FOOD, lastComboFoodConsumedTick
+		);
+
+		int max = Math.max(lastFoodConsumedTick, lastComboFoodConsumedTick);
+		Set<ConsumableItemType> maxCooldownTypes = getMaxLastConsumedItemsTickTimers(max, lastConsumedItemsTickTimers);
+		if (maxCooldownTypes.contains(ConsumableItemType.COMBO_FOOD))
+		{
+			return lastComboFoodConsumed;
+		}
+		else if (maxCooldownTypes.contains(ConsumableItemType.FOOD))
+		{
+			return lastFoodConsumed;
+		}
+
+		return null;
+	}
+
+	public ConsumableItemCooldown getLastCooldownSourceByType(ConsumableItemType type)
+	{
+		if (config.showItemCooldownPreview())
+		{
+			return new ConsumableItemCooldown(ITEM_COOLDOWN_PREVIEW_TICKS, ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS);
+		}
+
+		ConsumableItem cooldownSource = null;
+		switch (type)
+		{
+			case FOOD:
+			case COOKED_CRAB_MEAT:
+			case CAKE:
+			case F2P_FIRST_SLICE:
+			case F2P_SECOND_SLICE:
+			case P2P_PIE:
+				cooldownSource = getLastFoodCooldownSource();
+				break;
+			case DRINK:
+				cooldownSource = getLastDrinkCooldownSource();
+				break;
+			case COMBO_FOOD:
+				cooldownSource = getLastComboFoodCooldownSource();
+				break;
+		}
+
+		if (cooldownSource == null)
+		{
+			return null;
+		}
+
+		return cooldownSource.getFullCooldown();
+	}
+
 	public ConsumableItemCooldown getCooldownForConsumableItem(ConsumableItem consumableItem)
 	{
 		if (config.showItemCooldownPreview())
@@ -373,7 +522,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 				}
 
 				return new ConsumableItemCooldown(eatCooldownTicks, eatCooldownClientTicks);
-			case POTION:
+			case DRINK:
 				if (drinkCooldownTicks <= 0)
 				{
 					return null;
@@ -411,12 +560,16 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case F2P_FIRST_SLICE:
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
+				lastFoodConsumedTick = client.getTickCount();
+				lastFoodConsumed = consumableItem;
 				eatCooldownTicks = consumableItem.getEatCooldownTicks();
 				eatCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(eatCooldownTicks);
 				actionCooldownTicks += consumableItem.getActionCooldownTicks();
 				log.debug("{} - FOOD - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatCooldownTicks, comboEatCooldownTicks, drinkCooldownTicks, actionCooldownTicks);
 				break;
-			case POTION:
+			case DRINK:
+				lastDrinkConsumedTick = client.getTickCount();
+				lastDrinkConsumed = consumableItem;
 				drinkCooldownTicks = consumableItem.getDrinkCooldownTicks();
 				drinkCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(drinkCooldownTicks);
 				eatCooldownTicks = consumableItem.getEatCooldownTicks();
@@ -425,6 +578,8 @@ public class ConsumableCooldownsPlugin extends Plugin
 				log.debug("{} - POTION - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatCooldownTicks, comboEatCooldownTicks, drinkCooldownTicks, actionCooldownTicks);
 				break;
 			case COMBO_FOOD:
+				lastComboFoodConsumedTick = client.getTickCount();
+				lastComboFoodConsumed = consumableItem;
 				eatCooldownTicks = consumableItem.getEatCooldownTicks();
 				eatCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(eatCooldownTicks);
 				comboEatCooldownTicks = consumableItem.getComboEatCooldownTicks();
