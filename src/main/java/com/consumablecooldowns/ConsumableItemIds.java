@@ -30,7 +30,7 @@ import net.runelite.api.ItemID;
 
 public class ConsumableItemIds
 {
-	public static final Set<Integer> OVER_TIME_FOOD_ITEM_IDS = ImmutableSet.of(
+	public static final Set<Integer> OVERTIME_FOOD_ITEM_IDS = ImmutableSet.of(
 		ItemID.COOKED_WILD_KEBBIT,
 		ItemID.COOKED_LARUPIA,
 		ItemID.COOKED_BARBTAILED_KEBBIT,
@@ -125,7 +125,7 @@ public class ConsumableItemIds
 		ItemID.MINT_CAKE,
 		ItemID.PURPLE_SWEETS, ItemID.PURPLE_SWEETS_10476,
 		ItemID.HONEY_LOCUST,
-		ItemID.BANDAGES, ItemID.BANDAGES_25202, ItemID.BANDAGES_25730,
+		ItemID.BANDAGES, ItemID.BANDAGES_25730,
 		ItemID.STRANGE_FRUIT,
 		ItemID.WHITE_TREE_FRUIT,
 		ItemID.GOUT_TUBER,
@@ -344,5 +344,8 @@ public class ConsumableItemIds
 	);
 	public static final Set<Integer> COOKED_CRAB_MEAT_ITEM_IDS = ImmutableSet.of(
 		ItemID.COOKED_CRAB_MEAT, ItemID.COOKED_CRAB_MEAT_7523, ItemID.COOKED_CRAB_MEAT_7524, ItemID.COOKED_CRAB_MEAT_7525, ItemID.COOKED_CRAB_MEAT_7526
+	);
+	public static final Set<Integer> NO_DELAY_CONSUMABLE_ITEM_IDS = ImmutableSet.of(
+		ItemID.BANDAGES_25202
 	);
 }
