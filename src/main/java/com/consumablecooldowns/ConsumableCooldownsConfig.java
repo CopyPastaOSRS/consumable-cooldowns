@@ -53,10 +53,17 @@ public interface ConsumableCooldownsConfig extends Config
 	String itemCooldownIndicatorSection = "itemCooldownIndicator";
 
 	@ConfigSection(
+		name = "Delayed heal infobox",
+		description = "Options for the delayed heal infobox",
+		position = 101
+	)
+	String delayedHealInfoboxSection = "delayedHealInfobox";
+
+	@ConfigSection(
 		name = "Bottom to top indicator",
 		description = "Options for the bottom to top consumable item cooldown indicator",
 		closedByDefault = true,
-		position = 101
+		position = 102
 	)
 	String itemBottomToTopCooldownIndicatorSection = "itemBottomToTopCooldownIndicator";
 
@@ -73,6 +80,17 @@ public interface ConsumableCooldownsConfig extends Config
 
 	@ConfigItem(
 		position = 1,
+		keyName = "showDelayedHealInfobox",
+		name = "Show delayed heal infobox",
+		description = "Show an infobox with the time remaining until the delayed heal from consumables such as cooked moonlight antelope"
+	)
+	default boolean showDelayedHealInfobox()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		position = 2,
 		keyName = "cooldownTextMode",
 		name = "Mode",
 		description = "Mode used for the cooldown text that displays the duration a consumable item is on cooldown",
@@ -84,7 +102,7 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 2,
+		position = 3,
 		keyName = "textColor",
 		name = "Text color",
 		description = "Color of consumable item cooldown text",
@@ -96,7 +114,7 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 3,
+		position = 4,
 		keyName = "textShadowColor",
 		name = "Text shadow color",
 		description = "Color of consumable item cooldown text shadow",
@@ -108,7 +126,7 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 4,
+		position = 5,
 		keyName = "fontType",
 		name = "Text font type",
 		description = "Font type used for consumable item cooldown text",
@@ -121,7 +139,7 @@ public interface ConsumableCooldownsConfig extends Config
 
 	@Range(min = -15, max = 20)
 	@ConfigItem(
-		position = 5,
+		position = 6,
 		keyName = "textXOffset",
 		name = "Text width offset",
 		description = "X-axis offset for consumable item cooldown text position. Default value is in the center of the item",
@@ -134,7 +152,7 @@ public interface ConsumableCooldownsConfig extends Config
 
 	@Range(min = -15, max = 15)
 	@ConfigItem(
-		position = 6,
+		position = 7,
 		keyName = "textYOffset",
 		name = "Text height offset",
 		description = "Y-axis offset for consumable item cooldown text position. Default value is in the center of the item",
@@ -146,7 +164,7 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 7,
+		position = 8,
 		keyName = "cooldownIndicatorMode",
 		name = "Mode",
 		description = "Indicator mode which should be used to display that a consumable item is on cooldown",
@@ -158,7 +176,7 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 8,
+		position = 9,
 		keyName = "itemCooldownIndicatorFillColor",
 		name = "Fill color",
 		description = "Color of item cooldown indicator fill",
@@ -171,7 +189,7 @@ public interface ConsumableCooldownsConfig extends Config
 
 	@Range(max = 100)
 	@ConfigItem(
-		position = 9,
+		position = 10,
 		keyName = "itemCooldownIndicatorFillOpacity",
 		name = "Fill opacity",
 		description = "Opacity of item cooldown indicator fill color when on cooldown. From 0 to 100",
@@ -183,7 +201,19 @@ public interface ConsumableCooldownsConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 10,
+		position = 11,
+		keyName = "infoboxCooldownTextMode",
+		name = "Text mode",
+		description = "Mode used for the cooldown text that displays the time remaining until the delayed heal from consumables such as cooked moonlight antelope",
+		section = delayedHealInfoboxSection
+	)
+	default CooldownTextMode infoboxCooldownTextMode()
+	{
+		return CooldownTextMode.GAME_TICKS;
+	}
+
+	@ConfigItem(
+		position = 12,
 		keyName = "bottomToTopFullFillDuration",
 		name = "Full fill duration",
 		description = "The duration the cooldown indicator fill fully covers the item icon at the start of a cooldown. " +

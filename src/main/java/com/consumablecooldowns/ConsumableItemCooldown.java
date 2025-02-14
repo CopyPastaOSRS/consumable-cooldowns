@@ -1,14 +1,16 @@
 package com.consumablecooldowns;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
 @Getter
-@RequiredArgsConstructor
+@Setter
+@AllArgsConstructor
 public class ConsumableItemCooldown
 {
-	private final int ticks;
-	private final int clientTicks;
+	private int ticks;
+	private int clientTicks;
 
 	String toGameTicks()
 	{

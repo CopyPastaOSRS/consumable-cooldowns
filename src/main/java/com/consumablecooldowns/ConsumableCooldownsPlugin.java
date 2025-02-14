@@ -26,6 +26,7 @@ package com.consumablecooldowns;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -49,9 +50,11 @@ import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.util.Text;
 
 @Slf4j
@@ -64,6 +67,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 {
 	private static final ImmutableSet<ConsumableItem> CONSUMABLES = ImmutableSet.of(
 		new ConsumableItem(ConsumableItemType.FOOD, 3, 3, ConsumableItemIds.FOOD_ITEM_IDS::contains),
+		new ConsumableItem(ConsumableItemType.OVERTIME_FOOD, 3, 3, 8, ConsumableItemIds.OVERTIME_FOOD_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.DRINK, 0, 3, 0, 3, ConsumableItemIds.DRINK_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.COMBO_FOOD, 2, 3, 3, 3, ConsumableItemIds.COMBO_FOOD_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.CAKE, 3, 2, ConsumableItemIds.CAKE_ITEM_IDS::contains),
@@ -84,7 +88,13 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private Client client;
 
 	@Inject
-	private ConsumableCooldownsConfig config;
+	private InfoBoxManager infoBoxManager;
+
+	@Inject
+	private ItemManager itemManager;
+
+	@Inject
+	protected ConsumableCooldownsConfig config;
 
 	@Inject
 	private OverlayManager overlayManager;
@@ -106,6 +116,9 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private int comboEatCooldownTicks;
 	private int comboEatCooldownClientTicks;
 
+	private int ticksTillDelayedHeal;
+	private int clientTicksTillDelayedHeal;
+
 	private int previewCooldownTicks;
 	private int previewCooldownClientTicks;
 
@@ -115,6 +128,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	private ConsumableItem lastDrinkConsumed;
 	private int lastComboFoodConsumedTick;
 	private ConsumableItem lastComboFoodConsumed;
+	private ConsumableCooldownTimer delayedHealTimer;
 
 	private List<InventoryConsumableItemAction> inventoryConsumableItemActions;
 
@@ -130,9 +144,11 @@ public class ConsumableCooldownsPlugin extends Plugin
 		eatCooldownTicks = 0;
 		comboEatCooldownTicks = 0;
 		drinkCooldownTicks = 0;
+		ticksTillDelayedHeal = 0;
 		eatCooldownClientTicks = 0;
 		comboEatCooldownClientTicks = 0;
 		drinkCooldownClientTicks = 0;
+		clientTicksTillDelayedHeal = 0;
 		previewCooldownTicks = ITEM_COOLDOWN_PREVIEW_TICKS;
 		previewCooldownClientTicks = ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS;
 		lastFoodConsumedTick = -1;
@@ -141,6 +157,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		lastDrinkConsumed = null;
 		lastComboFoodConsumedTick = -1;
 		lastComboFoodConsumed = null;
+		delayedHealTimer = null;
 	}
 
 	@Override
@@ -177,6 +194,20 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case "itemCooldownIndicatorFillColor":
 			case "itemCooldownIndicatorFillOpacity":
 				overlay.invalidateFillCache();
+				break;
+			case "showDelayedHealInfobox":
+				if (delayedHealTimer == null)
+				{
+					break;
+				}
+
+				if (config.showDelayedHealInfobox())
+				{
+					infoBoxManager.addInfoBox(delayedHealTimer);
+					break;
+				}
+
+				infoBoxManager.removeInfoBox(delayedHealTimer);
 				break;
 			case "showItemCooldownPreview":
 				if (config.showItemCooldownPreview())
@@ -222,6 +253,16 @@ public class ConsumableCooldownsPlugin extends Plugin
 			drinkCooldownClientTicks--;
 		}
 
+		if (clientTicksTillDelayedHeal > 0)
+		{
+			clientTicksTillDelayedHeal--;
+		}
+
+		if (delayedHealTimer != null)
+		{
+			delayedHealTimer.updateCooldownClientTicks(clientTicksTillDelayedHeal);
+		}
+
 		if (config.showItemCooldownPreview() && previewCooldownClientTicks > ITEM_COOLDOWN_PREVIEW_GRACE_PERIOD_CLIENT_TICKS)
 		{
 			previewCooldownClientTicks--;
@@ -256,6 +297,21 @@ public class ConsumableCooldownsPlugin extends Plugin
 			drinkCooldownTicks--;
 		}
 
+		if (ticksTillDelayedHeal > 0)
+		{
+			ticksTillDelayedHeal--;
+		}
+
+		if (delayedHealTimer != null)
+		{
+			delayedHealTimer.updateCooldownTicks(ticksTillDelayedHeal);
+			if (ticksTillDelayedHeal < 1)
+			{
+				delayedHealTimer = null;
+				logDebug("{} - Removed delayed heal timer", client.getTickCount());
+			}
+		}
+
 		if (config.showItemCooldownPreview() && previewCooldownTicks > -1)
 		{
 			previewCooldownTicks--;
@@ -277,8 +333,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 			}
 
 			actionsIterator.remove();
-			log.warn("{} - Removed item action (id: {}, slot: {}) from queue (size: {}). More than 1 tick since action on tick: {}",
-				client.getTickCount(), itemAction.getItemId(), itemAction.getItemSlot(), inventoryConsumableItemActions.size(), itemAction.getActionTick());
+			log.warn("{} - Removed item action (id: {}, slot: {}) from queue (size: {}). More than 1 tick since action on tick: {}", client.getTickCount(), itemAction.getItemId(), itemAction.getItemSlot(), inventoryConsumableItemActions.size(), itemAction.getActionTick());
 		}
 	}
 
@@ -307,8 +362,8 @@ public class ConsumableCooldownsPlugin extends Plugin
 		}
 
 		Item item = oldInventory.getItems()[inventorySlot];
-		inventoryConsumableItemActions.add(new InventoryConsumableItemAction(
-			oldInventory.getItems(), item.getId(), inventorySlot, client.getTickCount())
+		inventoryConsumableItemActions.add(
+			new InventoryConsumableItemAction(oldInventory.getItems(), item.getId(), inventorySlot, client.getTickCount())
 		);
 		logDebug("{} - Added item in slot: {} with id: {} to queue", client.getTickCount(), inventorySlot, item.getId());
 	}
@@ -491,6 +546,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case F2P_FIRST_SLICE:
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
+			case OVERTIME_FOOD:
 				cooldownSource = getLastFoodCooldownSource();
 				break;
 			case DRINK:
@@ -524,6 +580,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case F2P_FIRST_SLICE:
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
+			case OVERTIME_FOOD:
 				if (eatCooldownTicks <= 0)
 				{
 					return null;
@@ -568,12 +625,25 @@ public class ConsumableCooldownsPlugin extends Plugin
 			case F2P_FIRST_SLICE:
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
+			case OVERTIME_FOOD:
 				lastFoodConsumedTick = client.getTickCount();
 				lastFoodConsumed = consumableItem;
 				eatCooldownTicks = consumableItem.getEatCooldownTicks();
 				eatCooldownClientTicks = consumableItem.cooldownTicksToClientTicks(eatCooldownTicks);
 				actionCooldownTicks += consumableItem.getActionCooldownTicks();
-				logDebug("{} - FOOD - eat: {}, comboEat: {}, drink: {}, action: {}", client.getTickCount(), eatCooldownTicks, comboEatCooldownTicks, drinkCooldownTicks, actionCooldownTicks);
+				if (consumableItemType == ConsumableItemType.OVERTIME_FOOD)
+				{
+					ticksTillDelayedHeal = consumableItem.getDelayedHealTicks();
+					clientTicksTillDelayedHeal = consumableItem.cooldownTicksToClientTicks(ticksTillDelayedHeal);
+
+					final BufferedImage consumableImage = itemManager.getImage(itemAction.getItemId(), 1, false);
+					delayedHealTimer = new ConsumableCooldownTimer(consumableImage, ticksTillDelayedHeal, clientTicksTillDelayedHeal, this);
+					if (config.showDelayedHealInfobox())
+					{
+						infoBoxManager.addInfoBox(delayedHealTimer);
+					}
+				}
+				logDebug("{} - FOOD - eat: {}, comboEat: {}, drink: {}, action: {}, delayed heal: {}", client.getTickCount(), eatCooldownTicks, comboEatCooldownTicks, drinkCooldownTicks, actionCooldownTicks, ticksTillDelayedHeal);
 				break;
 			case DRINK:
 				lastDrinkConsumedTick = client.getTickCount();

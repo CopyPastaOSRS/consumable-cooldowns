@@ -27,6 +27,7 @@ package com.consumablecooldowns;
 public enum ConsumableItemType
 {
 	FOOD,
+	OVERTIME_FOOD,
 	DRINK,
 	COMBO_FOOD,
 	COOKED_CRAB_MEAT,

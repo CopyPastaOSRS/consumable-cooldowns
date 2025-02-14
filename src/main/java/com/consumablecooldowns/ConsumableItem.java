@@ -40,15 +40,17 @@ public class ConsumableItem
 	private final int eatCooldownTicks;
 	private final int comboEatCooldownTicks;
 	private final int drinkCooldownTicks;
+	private final int delayedHealTicks;
 	private final Predicate<Integer> itemFilter;
 
-	public ConsumableItem(ConsumableItemType type, int actionCooldownTicks, int eatCooldownTicks, int comboEatCooldownTicks, Predicate<Integer> itemFilter)
+	public ConsumableItem(ConsumableItemType type, int actionCooldownTicks, int eatCooldownTicks, int delayedHealTicks, Predicate<Integer> itemFilter)
 	{
 		this.type = type;
 		this.actionCooldownTicks = actionCooldownTicks;
 		this.eatCooldownTicks = eatCooldownTicks;
-		this.comboEatCooldownTicks = comboEatCooldownTicks;
+		this.comboEatCooldownTicks = 0;
 		this.drinkCooldownTicks = 0;
+		this.delayedHealTicks = delayedHealTicks;
 		this.itemFilter = itemFilter;
 	}
 
@@ -59,6 +61,7 @@ public class ConsumableItem
 		this.eatCooldownTicks = eatCooldownTicks;
 		this.comboEatCooldownTicks = 0;
 		this.drinkCooldownTicks = 0;
+		this.delayedHealTicks = 0;
 		this.itemFilter = itemFilter;
 	}
 
@@ -69,6 +72,7 @@ public class ConsumableItem
 		this.eatCooldownTicks = eatCooldownTicks;
 		this.comboEatCooldownTicks = comboEatCooldownTicks;
 		this.drinkCooldownTicks = drinkCooldownTicks;
+		this.delayedHealTicks = 0;
 		this.itemFilter = itemFilter;
 	}
 
@@ -82,6 +86,7 @@ public class ConsumableItem
 			case F2P_FIRST_SLICE:
 			case F2P_SECOND_SLICE:
 			case P2P_PIE:
+			case OVERTIME_FOOD:
 				return new ConsumableItemCooldown(eatCooldownTicks, cooldownTicksToClientTicks(eatCooldownTicks));
 			case DRINK:
 				return new ConsumableItemCooldown(drinkCooldownTicks, cooldownTicksToClientTicks(drinkCooldownTicks));
@@ -90,6 +95,16 @@ public class ConsumableItem
 		}
 
 		return null;
+	}
+
+	public ConsumableItemCooldown getFullTimeUntilDelayedHeal()
+	{
+		if (type != ConsumableItemType.OVERTIME_FOOD)
+		{
+			return null;
+		}
+
+		return new ConsumableItemCooldown(delayedHealTicks, cooldownTicksToClientTicks(delayedHealTicks));
 	}
 
 	/**
