@@ -11,7 +11,7 @@ The cooldown indicators have a plethora of customization options. You can toggle
 
 ## Support for (almost) all consumable items
 The plugin supports the following consumable item categories:
-- Regular food (lobster, monkfish, shark, etc.)
+- Regular food (lobster, monkfish, shark, moonlight antelope, etc.)
 - Potions/drinks (super restore, super attack, saradomin brew, etc.)
 - Combo food (karambwan & gnome foods)
 - Variable delay sliced foods
