@@ -42,11 +42,13 @@ import net.runelite.api.GameState;
 import net.runelite.api.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -359,7 +361,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 			return;
 		}
 
-		// Menu options with a consumable menu options can also be on objects, i.e. PoH rejuvenation pool
+		// Menu options with a consumable menu option (i.e. drink) can also occur on objects such as PoH rejuvenation pool
 		int inventorySlot = event.getMenuEntry().getParam0();
 		if (inventorySlot > LAST_INVENTORY_SLOT_INDEX)
 		{
@@ -371,6 +373,26 @@ public class ConsumableCooldownsPlugin extends Plugin
 			new InventoryConsumableItemAction(oldInventory.getItems(), item.getId(), inventorySlot, client.getTickCount())
 		);
 		logDebug("{} - Added item in slot: {} with id: {} to queue", client.getTickCount(), inventorySlot, item.getId());
+	}
+
+	@Subscribe
+	private void onChatMessage(ChatMessage event)
+	{
+		// Grid master specific logic
+		String message = event.getMessage();
+		if (message.equals("You bite a chunk out of the corrupted shark, but it quickly regrows."))
+		{
+			ConsumableItem consumableItem = getConsumableItemFromId(ItemID.EVENT_CORRUPTED_SHARK);
+			InventoryConsumableItemAction itemAction = new InventoryConsumableItemAction(null, ItemID.EVENT_CORRUPTED_SHARK, -1, client.getTickCount());
+			itemConsumed(consumableItem, itemAction);
+		}
+		else if (message.equals("Bottomless Brew prevents your potion from being consumed."))
+		{
+			// All drinks add the same delay, don't try to determine what drink it is, since it is not needed for implementation
+			ConsumableItem consumableItem = getConsumableItemFromId(ItemID.STRENGTH4);
+			InventoryConsumableItemAction itemAction = new InventoryConsumableItemAction(null, ItemID.STRENGTH4, -1, client.getTickCount());
+			itemConsumed(consumableItem, itemAction);
+		}
 	}
 
 	@Subscribe
