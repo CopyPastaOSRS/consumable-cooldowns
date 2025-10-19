@@ -207,9 +207,9 @@ public interface ConsumableCooldownsConfig extends Config
 		description = "Mode used for the cooldown text that displays the time remaining until the delayed heal from consumables such as cooked moonlight antelope",
 		section = delayedHealInfoboxSection
 	)
-	default CooldownTextMode infoboxCooldownTextMode()
+	default InfoBoxTextMode infoboxCooldownTextMode()
 	{
-		return CooldownTextMode.GAME_TICKS;
+		return InfoBoxTextMode.GAME_TICKS;
 	}
 
 	@ConfigItem(

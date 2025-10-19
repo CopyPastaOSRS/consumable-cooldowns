@@ -41,8 +41,16 @@ public class ConsumableCooldownTimer extends InfoBox
 			case GAME_TICKS:
 				String tickText = cooldown.getTicks() == 1 ? " tick" : " ticks";
 				return cooldown.toGameTicks() + tickText;
+			case GAME_TICKS_COMPACT:
+				return cooldown.toGameTicks() + "t";
+			case GAME_TICKS_NO_SUFFIX:
+				return cooldown.toGameTicks();
 			case SECONDS_MILLISECONDS:
 				return cooldown.toSecondsMilliseconds();
+			case MINUTES_SECONDS:
+				return cooldown.toMinuteSeconds();
+			case SECONDS:
+				return cooldown.toSeconds();
 			case NONE:
 			default:
 				return null;
