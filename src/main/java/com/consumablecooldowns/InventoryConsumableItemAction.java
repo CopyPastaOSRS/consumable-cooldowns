@@ -61,6 +61,6 @@ public class InventoryConsumableItemAction
 
 	private boolean isMultiQuantityInSameSlotConsumable(int itemId)
 	{
-		return itemId == ItemID.PURPLE_SWEETS || itemId == ItemID.PURPLE_SWEETS_10476;
+		return itemId == ItemID.PURPLE_SWEETS || itemId == ItemID.PURPLE_SWEETS_10476 || itemId == ItemID.HONEY_LOCUST;
 	}
 }
