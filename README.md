@@ -1,6 +1,6 @@
 # Consumable Cooldowns
 
-Find the delays when consuming confusing? Worry no more. This plugin adds cooldown indicators for the various consumable items in your inventory.
+Find the delays when consuming copious amount of food confusing? Worry no more. This plugin adds cooldown indicators for the various consumable items in your inventory.
 
 ![Consumable cooldown indicators example](img/cooldown-indicators-example.gif)
 
