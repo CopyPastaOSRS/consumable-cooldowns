@@ -39,7 +39,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
 import net.runelite.api.GameState;
-import net.runelite.api.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.events.ChatMessage;
@@ -48,6 +47,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -355,7 +355,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 			return;
 		}
 
-		ItemContainer oldInventory = client.getItemContainer(InventoryID.INVENTORY);
+		ItemContainer oldInventory = client.getItemContainer(InventoryID.INV);
 		if (oldInventory == null)
 		{
 			return;
@@ -398,7 +398,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 	@Subscribe
 	private void onItemContainerChanged(ItemContainerChanged event)
 	{
-		if (event.getContainerId() != InventoryID.INVENTORY.getId())
+		if (event.getContainerId() != InventoryID.INV)
 		{
 			return;
 		}
