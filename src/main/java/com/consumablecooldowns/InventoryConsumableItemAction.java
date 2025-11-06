@@ -28,7 +28,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import net.runelite.api.Item;
-import net.runelite.api.ItemID;
+import net.runelite.api.gameval.ItemID;
 
 @AllArgsConstructor
 @Getter(AccessLevel.MODULE)
@@ -61,6 +61,6 @@ public class InventoryConsumableItemAction
 
 	private boolean isMultiQuantityInSameSlotConsumable(int itemId)
 	{
-		return itemId == ItemID.PURPLE_SWEETS || itemId == ItemID.PURPLE_SWEETS_10476 || itemId == ItemID.HONEY_LOCUST;
+		return itemId == ItemID.EASTER_EGG_2005_PURPLE || itemId == ItemID.TRAIL_SWEETS || itemId == ItemID.TOA_HONEY_LOCUST;
 	}
 }

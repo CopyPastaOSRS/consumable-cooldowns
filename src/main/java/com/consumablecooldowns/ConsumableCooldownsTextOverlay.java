@@ -30,7 +30,7 @@ import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.NullItemID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
 
@@ -67,7 +67,7 @@ public class ConsumableCooldownsTextOverlay extends WidgetItemOverlay
 		int itemId = widgetItem.getId();
 
 		// Empty inventory item
-		if (itemId == NullItemID.NULL_6512)
+		if (itemId == ItemID.BLANKOBJECT)
 		{
 			return;
 		}
