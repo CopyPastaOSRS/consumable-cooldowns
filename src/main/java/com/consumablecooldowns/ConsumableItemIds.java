@@ -188,7 +188,12 @@ public class ConsumableItemIds
 		net.runelite.api.gameval.ItemID.CAERULA_BERRIES, net.runelite.api.gameval.ItemID.BOWL_DAMIANA_TEA,
 		net.runelite.api.gameval.ItemID.BOWL_DAMIANA_TEA_MILKY, net.runelite.api.gameval.ItemID.CUP_DAMIANA_TEA,
 		net.runelite.api.gameval.ItemID.CUP_DAMIANA_TEA_MILKY, net.runelite.api.gameval.ItemID.ORANGE_HAT,
-		net.runelite.api.gameval.ItemID.BLUEBERRY_MUFFIN, net.runelite.api.gameval.ItemID.EVENT_CORRUPTED_SHARK
+		net.runelite.api.gameval.ItemID.BLUEBERRY_MUFFIN, net.runelite.api.gameval.ItemID.EVENT_CORRUPTED_SHARK,
+		ItemID.GIANT_KRILL,
+		ItemID.HADDOCK,
+		ItemID.YELLOWFIN,
+		ItemID.BLUEFIN,
+		ItemID.MARLIN
 	);
 	public static final Set<Integer> DRINK_ITEM_IDS = ImmutableSet.of(
 		ItemID.GUTHIX_REST4, ItemID.GUTHIX_REST3, ItemID.GUTHIX_REST2, ItemID.GUTHIX_REST1,
@@ -332,7 +337,7 @@ public class ConsumableItemIds
 		ItemID.VEGETABLE_BATTA_9533, ItemID.PREMADE_VEG_BATTA, ItemID.CHEESETOM_BATTA, ItemID.CHEESETOM_BATTA_9535, ItemID.PREMADE_CT_BATTA,
 		ItemID.WORM_HOLE, ItemID.WORM_HOLE_9547, ItemID.PREMADE_WORM_HOLE, ItemID.VEG_BALL, ItemID.VEG_BALL_9549, ItemID.PREMADE_VEG_BALL,
 		ItemID.CHOCOLATE_BOMB, ItemID.CHOCOLATE_BOMB_9553, ItemID.PREMADE_CHOC_BOMB, ItemID.TANGLED_TOADS_LEGS, ItemID.TANGLED_TOADS_LEGS_9551,
-		ItemID.PREMADE_TTL, ItemID.TOADS_LEGS, ItemID.KING_WORM
+		ItemID.PREMADE_TTL, ItemID.TOADS_LEGS, ItemID.KING_WORM, ItemID.HALIBUT
 	);
 	public static final Set<Integer> CAKE_ITEM_IDS = ImmutableSet.of(
 		ItemID.CAKE, ItemID.CAKE_24549, ItemID.CHOCOLATE_CAKE, ItemID._23_CAKE, ItemID._23_CHOCOLATE_CAKE
