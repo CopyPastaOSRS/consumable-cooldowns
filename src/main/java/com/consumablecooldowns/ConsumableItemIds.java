@@ -188,7 +188,8 @@ public class ConsumableItemIds
 		net.runelite.api.gameval.ItemID.CAERULA_BERRIES, net.runelite.api.gameval.ItemID.BOWL_DAMIANA_TEA,
 		net.runelite.api.gameval.ItemID.BOWL_DAMIANA_TEA_MILKY, net.runelite.api.gameval.ItemID.CUP_DAMIANA_TEA,
 		net.runelite.api.gameval.ItemID.CUP_DAMIANA_TEA_MILKY, net.runelite.api.gameval.ItemID.ORANGE_HAT,
-		net.runelite.api.gameval.ItemID.BLUEBERRY_MUFFIN, net.runelite.api.gameval.ItemID.EVENT_CORRUPTED_SHARK
+		net.runelite.api.gameval.ItemID.BLUEBERRY_MUFFIN, net.runelite.api.gameval.ItemID.EVENT_CORRUPTED_SHARK,
+		net.runelite.api.gameval.ItemID.HUNDRED_ILM_COOKED_STUFFED_SNAKE, net.runelite.api.gameval.ItemID.ELID_CHOC_ICE
 	);
 	public static final Set<Integer> DRINK_ITEM_IDS = ImmutableSet.of(
 		ItemID.GUTHIX_REST4, ItemID.GUTHIX_REST3, ItemID.GUTHIX_REST2, ItemID.GUTHIX_REST1,
