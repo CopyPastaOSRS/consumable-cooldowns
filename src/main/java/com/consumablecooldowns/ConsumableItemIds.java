@@ -189,7 +189,10 @@ public class ConsumableItemIds
 		net.runelite.api.gameval.ItemID.BOWL_DAMIANA_TEA_MILKY, net.runelite.api.gameval.ItemID.CUP_DAMIANA_TEA,
 		net.runelite.api.gameval.ItemID.CUP_DAMIANA_TEA_MILKY, net.runelite.api.gameval.ItemID.ORANGE_HAT,
 		net.runelite.api.gameval.ItemID.BLUEBERRY_MUFFIN, net.runelite.api.gameval.ItemID.EVENT_CORRUPTED_SHARK,
-		net.runelite.api.gameval.ItemID.HUNDRED_ILM_COOKED_STUFFED_SNAKE, net.runelite.api.gameval.ItemID.ELID_CHOC_ICE
+		net.runelite.api.gameval.ItemID.HUNDRED_ILM_COOKED_STUFFED_SNAKE, net.runelite.api.gameval.ItemID.ELID_CHOC_ICE,
+		net.runelite.api.gameval.ItemID.GIANT_KRILL, net.runelite.api.gameval.ItemID.HADDOCK, net.runelite.api.gameval.ItemID.YELLOWFIN,
+		net.runelite.api.gameval.ItemID.BLUEFIN, net.runelite.api.gameval.ItemID.MARLIN, net.runelite.api.gameval.ItemID.RED_CRAB_MEAT,
+		net.runelite.api.gameval.ItemID.BLUE_CRAB_MEAT, net.runelite.api.gameval.ItemID.RAINBOW_CRAB_MEAT
 	);
 	public static final Set<Integer> DRINK_ITEM_IDS = ImmutableSet.of(
 		ItemID.GUTHIX_REST4, ItemID.GUTHIX_REST3, ItemID.GUTHIX_REST2, ItemID.GUTHIX_REST1,
@@ -322,7 +325,13 @@ public class ConsumableItemIds
 		ItemID.EXTENDED_ANTIVENOM4, ItemID.EXTENDED_ANTIVENOM3, ItemID.EXTENDED_ANTIVENOM2, ItemID.EXTENDED_ANTIVENOM1,
 		ItemID.PRAYER_REGENERATION_POTION4, ItemID.PRAYER_REGENERATION_POTION3, ItemID.PRAYER_REGENERATION_POTION2, ItemID.PRAYER_REGENERATION_POTION1,
 		ItemID.GOADING_POTION4, ItemID.GOADING_POTION3, ItemID.GOADING_POTION2, ItemID.GOADING_POTION1,
-		net.runelite.api.gameval.ItemID._4DOSESURGE, net.runelite.api.gameval.ItemID._3DOSESURGE, net.runelite.api.gameval.ItemID._2DOSESURGE, net.runelite.api.gameval.ItemID._1DOSESURGE
+		net.runelite.api.gameval.ItemID._4DOSESURGE, net.runelite.api.gameval.ItemID._3DOSESURGE, net.runelite.api.gameval.ItemID._2DOSESURGE, net.runelite.api.gameval.ItemID._1DOSESURGE,
+		net.runelite.api.gameval.ItemID._4DOSEHAEMOSTATICDRESSING, net.runelite.api.gameval.ItemID._3DOSEHAEMOSTATICDRESSING, net.runelite.api.gameval.ItemID._2DOSEHAEMOSTATICDRESSING, net.runelite.api.gameval.ItemID._1DOSEHAEMOSTATICDRESSING,
+		net.runelite.api.gameval.ItemID._4DOSE2FISHERSPOTION, net.runelite.api.gameval.ItemID._3DOSE2FISHERSPOTION, net.runelite.api.gameval.ItemID._2DOSE2FISHERSPOTION, net.runelite.api.gameval.ItemID._1DOSE2FISHERSPOTION,
+		net.runelite.api.gameval.ItemID._4DOSE3ENERGY, net.runelite.api.gameval.ItemID._3DOSE3ENERGY, net.runelite.api.gameval.ItemID._2DOSE3ENERGY, net.runelite.api.gameval.ItemID._1DOSE3ENERGY,
+		net.runelite.api.gameval.ItemID._4DOSE2HUNTING, net.runelite.api.gameval.ItemID._3DOSE2HUNTING, net.runelite.api.gameval.ItemID._2DOSE2HUNTING, net.runelite.api.gameval.ItemID._1DOSE2HUNTING,
+		net.runelite.api.gameval.ItemID._4DOSE2STAMINA, net.runelite.api.gameval.ItemID._3DOSE2STAMINA, net.runelite.api.gameval.ItemID._2DOSE2STAMINA, net.runelite.api.gameval.ItemID._1DOSE2STAMINA,
+		net.runelite.api.gameval.ItemID._4DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._3DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._2DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._1DOSEARMADYLBREW
 	);
 	public static final Set<Integer> COMBO_FOOD_ITEM_IDS = ImmutableSet.of(
 		ItemID.COOKED_KARAMBWAN, ItemID.COOKED_KARAMBWAN_3147, ItemID.COOKED_KARAMBWAN_23533, ItemID.BLIGHTED_KARAMBWAN, ItemID.CRYSTAL_PADDLEFISH,
@@ -333,7 +342,7 @@ public class ConsumableItemIds
 		ItemID.VEGETABLE_BATTA_9533, ItemID.PREMADE_VEG_BATTA, ItemID.CHEESETOM_BATTA, ItemID.CHEESETOM_BATTA_9535, ItemID.PREMADE_CT_BATTA,
 		ItemID.WORM_HOLE, ItemID.WORM_HOLE_9547, ItemID.PREMADE_WORM_HOLE, ItemID.VEG_BALL, ItemID.VEG_BALL_9549, ItemID.PREMADE_VEG_BALL,
 		ItemID.CHOCOLATE_BOMB, ItemID.CHOCOLATE_BOMB_9553, ItemID.PREMADE_CHOC_BOMB, ItemID.TANGLED_TOADS_LEGS, ItemID.TANGLED_TOADS_LEGS_9551,
-		ItemID.PREMADE_TTL, ItemID.TOADS_LEGS, ItemID.KING_WORM
+		ItemID.PREMADE_TTL, ItemID.TOADS_LEGS, ItemID.KING_WORM, net.runelite.api.gameval.ItemID.HALIBUT
 	);
 	public static final Set<Integer> CAKE_ITEM_IDS = ImmutableSet.of(
 		ItemID.CAKE, ItemID.CAKE_24549, ItemID.CHOCOLATE_CAKE, ItemID._23_CAKE, ItemID._23_CHOCOLATE_CAKE
