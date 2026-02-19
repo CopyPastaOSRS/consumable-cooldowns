@@ -331,7 +331,8 @@ public class ConsumableItemIds
 		net.runelite.api.gameval.ItemID._4DOSE3ENERGY, net.runelite.api.gameval.ItemID._3DOSE3ENERGY, net.runelite.api.gameval.ItemID._2DOSE3ENERGY, net.runelite.api.gameval.ItemID._1DOSE3ENERGY,
 		net.runelite.api.gameval.ItemID._4DOSE2HUNTING, net.runelite.api.gameval.ItemID._3DOSE2HUNTING, net.runelite.api.gameval.ItemID._2DOSE2HUNTING, net.runelite.api.gameval.ItemID._1DOSE2HUNTING,
 		net.runelite.api.gameval.ItemID._4DOSE2STAMINA, net.runelite.api.gameval.ItemID._3DOSE2STAMINA, net.runelite.api.gameval.ItemID._2DOSE2STAMINA, net.runelite.api.gameval.ItemID._1DOSE2STAMINA,
-		net.runelite.api.gameval.ItemID._4DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._3DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._2DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._1DOSEARMADYLBREW
+		net.runelite.api.gameval.ItemID._4DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._3DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._2DOSEARMADYLBREW, net.runelite.api.gameval.ItemID._1DOSEARMADYLBREW,
+		net.runelite.api.gameval.ItemID.WINT_POTION4, net.runelite.api.gameval.ItemID.WINT_POTION3, net.runelite.api.gameval.ItemID.WINT_POTION2, net.runelite.api.gameval.ItemID.WINT_POTION1
 	);
 	public static final Set<Integer> COMBO_FOOD_ITEM_IDS = ImmutableSet.of(
 		ItemID.COOKED_KARAMBWAN, ItemID.COOKED_KARAMBWAN_3147, ItemID.COOKED_KARAMBWAN_23533, ItemID.BLIGHTED_KARAMBWAN, ItemID.CRYSTAL_PADDLEFISH,
