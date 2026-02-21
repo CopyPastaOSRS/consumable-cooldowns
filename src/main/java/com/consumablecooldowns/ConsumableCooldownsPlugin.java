@@ -78,8 +78,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 		new ConsumableItem(ConsumableItemType.P2P_PIE, 3, 1, ConsumableItemIds.P2P_PIE_ITEM_IDS::contains),
 		new ConsumableItem(ConsumableItemType.COOKED_CRAB_MEAT, 2, 2, ConsumableItemIds.COOKED_CRAB_MEAT_ITEM_IDS::contains)
 	);
-	private static final Pattern EAT_PATTERN = Pattern.compile("^eat");
-	private static final Pattern DRINK_PATTERN = Pattern.compile("^drink");
+	private static final Pattern CONSUMABLE_MENU_OPTION_PATTERN = Pattern.compile("^(eat|drink|consume)");
 	private static final int ITEM_COOLDOWN_PREVIEW_TICKS = 2;
 	private static final int ITEM_COOLDOWN_PREVIEW_CLIENT_TICKS = 60;
 	private static final int ITEM_COOLDOWN_PREVIEW_GRACE_PERIOD_CLIENT_TICKS = -(Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
@@ -705,7 +704,7 @@ public class ConsumableCooldownsPlugin extends Plugin
 
 	private boolean isConsumableMenuOption(String menuOption)
 	{
-		return EAT_PATTERN.matcher(menuOption).find() || DRINK_PATTERN.matcher(menuOption).find();
+		return CONSUMABLE_MENU_OPTION_PATTERN.matcher(menuOption).find();
 	}
 
 	private boolean isMenuOptionItemInInventoryActions(MenuOptionClicked event)
