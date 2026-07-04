@@ -10,7 +10,7 @@ repositories {
 	mavenCentral()
 }
 
-def runeLiteVersion = 'latest.release'
+def runeLiteVersion = '1.12.32-SNAPSHOT' // latest.release (1.12.31.1) lacks Blood Moon Rises ItemID constants; revert to latest.release once 1.12.32 ships
 
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
