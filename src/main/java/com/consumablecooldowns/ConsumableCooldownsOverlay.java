@@ -35,7 +35,7 @@ import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.NullItemID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
@@ -97,7 +97,7 @@ public class ConsumableCooldownsOverlay extends WidgetItemOverlay
 		int itemId = widgetItem.getId();
 
 		// Empty inventory item
-		if (itemId == NullItemID.NULL_6512)
+		if (itemId == ItemID.BLANKOBJECT)
 		{
 			return;
 		}
